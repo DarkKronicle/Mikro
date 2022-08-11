@@ -1,0 +1,6 @@
+git+https://github.com/Rapptz/discord.py
+toml~=0.10.2
+lru-dict
+git+https://github.com/Cupcakus/pafy
+discord
+youtube-dl

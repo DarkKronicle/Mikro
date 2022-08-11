@@ -1,0 +1,12 @@
+{
+    "join_sound": {
+        "523605852557672449": [
+            ["https://cdn.discordapp.com/attachments/753694538199203840/1007053040244773064/slime.mp3", 0.8],
+            ["https://www.myinstants.com/media/sounds/chika-bum-bum-bum.mp3", 0.8],
+            ["https://www.myinstants.com/media/sounds/overlord-iii-opening-voracity-albedo-laugh-clip.mp3", 1.5]
+        ],
+        "203531944909078528": [
+            ["https://cdn.discordapp.com/attachments/753694538199203840/1007049853769105448/cthugha-cut.mp3", 0.5]
+        ]
+    }
+}

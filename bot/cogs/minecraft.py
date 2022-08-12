@@ -36,7 +36,10 @@ class Minecraft(commands.Cog):
         if not attachment.url.startswith('https://cdn.discordapp.com/attachments'):
             # Only want to download from trusted discord source
             return
-        result = await crash.upload_crash(attachment.url)
+        try:
+            result = await crash.upload_crash(attachment.url)
+        except Exception as e:
+            return
         await message.reply(embed=self.get_crashy_embed(result), allowed_mentions=discord.AllowedMentions.none())
 
     def get_crashy_embed(self, url):

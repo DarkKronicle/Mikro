@@ -2,5 +2,7 @@ git+https://github.com/Rapptz/discord.py
 toml~=0.10.2
 lru-dict
 git+https://github.com/Cupcakus/pafy
-discord
+discord~=1.7.3
 youtube-dl
+aiohttp~=3.8.1
+beautifulsoup4~=4.11.1

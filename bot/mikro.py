@@ -16,7 +16,8 @@ startup_extensions = (
     'bot.cogs.reaction',
     'bot.cogs.reply',
     'bot.cogs.voice',
-    'bot.cogs.conversation'
+    'bot.cogs.conversation',
+    'bot.cogs.minecraft',
 )
 
 

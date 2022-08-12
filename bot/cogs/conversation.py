@@ -34,7 +34,6 @@ class Conversation(commands.Cog):
         if destination is None:
             destination = ctx.channel
 
-        before = None
         messages = []
 
         if isinstance(target, discord.TextChannel):
@@ -43,7 +42,6 @@ class Conversation(commands.Cog):
             channel = target.channel
             if isinstance(target, discord.PartialMessage):
                 target = await target.fetch()
-            before = target
             amount = amount - 1
             messages.append(target)
 
@@ -58,10 +56,9 @@ class Conversation(commands.Cog):
             return
 
         webhooker = Webhooker(destination)
-        async for message in channel.history(limit=amount, oldest_first=before is not None, after=before):
+        async for message in channel.history(limit=amount, oldest_first=False):
             messages.append(message)
-        if before is None:
-            messages.reverse()
+        messages.reverse()
         await webhooker.create_thread_with_messages(messages, creator=ctx.author)
 
     @move.command(name='reply')

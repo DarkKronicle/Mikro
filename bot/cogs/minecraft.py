@@ -40,6 +40,8 @@ class Minecraft(commands.Cog):
             result = await crash.upload_crash(attachment.url)
         except Exception as e:
             return
+        if result is None:
+            return
         await message.reply(embed=self.get_crashy_embed(result), allowed_mentions=discord.AllowedMentions.none())
 
     def get_crashy_embed(self, url):

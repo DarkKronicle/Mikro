@@ -34,8 +34,14 @@ async def gzip_crash(url):
                         break
                     result += chunk
                     i += 1
-                    if i > 512:
+                    if i > 128:
                         # Too big!
                         return None
+                if i < 3:
+                    # Not a real crash report
+                    return None
+                string = result.decode('utf-8')
+                if not string.startswith('---- Minecraft Crash Report ----'):
+                    return None
                 return gzip.compress(result)
     return None

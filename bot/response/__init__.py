@@ -12,7 +12,7 @@ _converter_types = {}
 
 _converters = defaultdict(list)
 
-URL_REGEX = re.compile(r'\b((?:https?://)?(?:(?:www\.)?(?:[\da-z\.-]+)\.(?:[a-z]{2,6}))(?:/[\w\.-]*)*/?)(?!>)\b')
+URL_REGEX = re.compile(r'\b((?:https?://)?(?:(?:www\.)?(?:[\da-z\.-]+)\.(?:[a-z]{2,6}))(?:/[^\s]*)*/?)(?!>)\b')
 
 
 async def parse_content(content: str):

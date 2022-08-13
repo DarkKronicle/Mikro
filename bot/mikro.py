@@ -1,5 +1,3 @@
-import asyncio
-
 import bot as bot_global
 import logging
 import traceback
@@ -8,6 +6,7 @@ import discord
 from discord.ext import commands
 from datetime import datetime
 
+from bot import response
 
 startup_extensions = (
     'bot.cogs.suggestions',
@@ -18,6 +17,7 @@ startup_extensions = (
     'bot.cogs.voice',
     'bot.cogs.conversation',
     'bot.cogs.minecraft',
+    'bot.response.response_cog',
 )
 
 
@@ -55,6 +55,7 @@ class Mikro(commands.Bot):
             except (discord.ClientException, ModuleNotFoundError):
                 logging.warning('Failed to load extension {0}.'.format(extension))
                 traceback.print_exc()
+        response.load_all()
         self.loop.create_task(self.run_once_when_ready())
 
     def run(self):

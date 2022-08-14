@@ -3,6 +3,8 @@ import datetime
 import json
 import re
 import typing
+from collections import Counter
+
 import bot as bot_global
 
 import aiohttp
@@ -35,6 +37,9 @@ async def github(content: parse.ParseResult):
                 else:
                     embed = await build_file_embed(session, content.geturl(), owner, repo, parts[4:])
                     return {'embed': embed}
+            if parts[3] == 'commit':
+                embed = await build_commit_embed(session, content.geturl(), owner, repo, parts[4])
+                return {'embed': embed}
         else:
             async with aiohttp.ClientSession() as session:
                 embed = await build_embed(session, owner, repo)
@@ -66,13 +71,17 @@ async def build_blob_embed(session, url, owner, repo, blob_path, lines):
     )
     if file_data is None:
         embed.description = 'File too large...'
-        return embed
-    text: list[str] = str(base64.b64decode(file_data['content'])).split(r'\n')
+        return '', embed
+    raw_text = base64.b64decode(file_data['content']).decode('utf-8').replace(r'\t', '    ')
+    if not isinstance(raw_text, str):
+        embed.description = 'Not a text file'
+        return '', embed
+    text = raw_text.split('\n')
 
     matches = re.findall(r'\d+', lines)
     start = int(matches[0]) - 1
     if len(matches) > 1:
-        end = int(matches[1])
+        end = int(matches[1]) + 1
     else:
         end = start
 
@@ -86,7 +95,26 @@ async def build_blob_embed(session, url, owner, repo, blob_path, lines):
         end = start
         start = inter
 
-    formatted = '\n'.join(text[start:end])
+    end_lines = text[start:end]
+    min_white = -1
+    for t in end_lines:
+        size = t.lstrip()
+        if len(size) == 0:
+            continue
+        if min_white < 0:
+            min_white = len(t) - len(size)
+        else:
+            min_white = min(min_white, len(t) - len(size))
+    if min_white > 0:
+        new_text = []
+        for t in end_lines:
+            if len(t) > min_white:
+                new_text.append(t[min_white:])
+            else:
+                new_text.append(t)
+        end_lines = new_text
+
+    formatted = '\n'.join(end_lines)
     formatted = formatted.replace('```', '` ` `')
     if len(formatted) > 2000 - 20:
         formatted = formatted[:1977] + '...'
@@ -116,6 +144,32 @@ async def build_file_embed(session, url, owner, repo, path, blob=False):
     if committer is not None and isinstance(committer, dict):
         embed.set_author(name=committer['login'], icon_url=committer['avatar_url'], url=committer['html_url'])
     embed.add_field(name='Message', value=commit['message'])
+    return embed
+
+
+async def build_commit_embed(session, url, owner, repo, commit):
+    embed = await build_embed(session, owner, repo, use_image=False, use_released=False, use_languages=False)
+    embed.set_image(url=await get_image(session, url))
+    embed.clear_fields()
+    embed.title = 'Commit {0} at {1}'.format(commit[:8], repo)
+    embed.url = url
+    commit = await request(session, 'https://api.github.com/repos/{0}/{1}/commits/{2}'.format(owner, repo, commit))
+    files = commit['files']
+    statuses = Counter()
+    for f in files:
+        statuses[f['status']] += 1
+    committer = commit['committer']
+    if committer is not None and isinstance(committer, dict):
+        embed.set_author(name=committer['login'], icon_url=committer['avatar_url'], url=committer['html_url'])
+    embed.description = commit['commit']['message']
+    embed.add_field(
+        name='Stats',
+        value='Additions: `{0}`\nDeletions: `{1}`\nTotal: `{2}`'.format(
+            commit['stats']['additions'], commit['stats']['deletions'], commit['stats']['total']
+        ),
+    )
+    embed.add_field(name='Files', value='\n'.join(['{0}: `{1}`'.format(s.capitalize(), c) for s, c in statuses.items()]))
+    embed.add_field(name='Updated At', value='<t:{0}:f>'.format(iso_to_seconds(commit['commit']['committer']['date'])))
     return embed
 
 
@@ -173,7 +227,7 @@ async def build_embed(session, owner, repo, *, use_image=True, use_languages=Tru
             if len(body) > 30:
                 body = body[:30]
             value += '\n{0}'.format(body)
-        embed.add_field(name='Latest Release', value=value, inline=False)
+        embed.add_field(name='Latest Release', value=value, inline=True)
 
     return embed
 

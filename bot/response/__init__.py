@@ -1,12 +1,12 @@
 from functools import wraps
 
 from urllib import parse
-import typing
 import re
 from collections import defaultdict
 import importlib
 import pathlib
 import traceback
+import typing
 
 _converter_types = {}
 
@@ -28,6 +28,7 @@ async def parse_content(content: str):
                     if data is not None:
                         kwargs_list.append(data)
                 except Exception as e:
+                    print(e)
                     traceback.print_exception(e)
     return kwargs_list
 

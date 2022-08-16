@@ -1,3 +1,5 @@
+import typing
+
 import bot as bot_global
 import logging
 import traceback
@@ -7,6 +9,7 @@ from discord.ext import commands
 from datetime import datetime
 
 from bot import response
+from bot.core.context import Context
 
 startup_extensions = (
     'bot.cogs.suggestions',
@@ -86,3 +89,6 @@ class Mikro(commands.Bot):
             return
         if raise_err:
             raise error
+
+    async def get_context(self, origin: typing.Union[discord.Interaction, discord.Message], /, *, cls=Context) -> Context:
+        return await super().get_context(origin, cls=cls)

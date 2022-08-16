@@ -78,9 +78,12 @@ def create_key(func, *args, **kwargs):
 
 
 # TODO remake this as a class
-def cache(maxsize=64):  # noqa: C901,WPS212,WPS231
+def cache(maxsize=64, cache_object=None):  # noqa: C901,WPS212,WPS231
     def decorator(func):  # noqa: WPS212,WPS231
-        internal_cache = LRU(maxsize)
+        if cache_object is None:
+            internal_cache = LRU(maxsize)
+        else:
+            internal_cache = cache_object
 
         @wraps(func)
         def wrapper(*args, **kwargs):

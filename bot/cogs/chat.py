@@ -5,6 +5,7 @@ from discord.ext import commands
 import discord
 from bot.mikro import Mikro
 import traceback
+from bot.util import cache
 
 
 class Chat(commands.Cog):
@@ -13,6 +14,7 @@ class Chat(commands.Cog):
         self.bot: Mikro = bot
         self.bot.add_loop('status', self.update_status)
         self.score = 0
+        self.users = cache.ExpiringDict(30)
 
     async def cog_load(self) -> None:
         try:
@@ -32,7 +34,11 @@ class Chat(commands.Cog):
     async def on_message(self, message: discord.Message):
         if message.author.bot:
             return
-        self.score += 1
+        if message.guild.id is None or message.guild.id != 753693459369427044:
+            return
+        if message.author.id in self.users:
+            self.score += 1
+            self.users[message.author.id] = 1
 
     async def update_status(self, time: datetime):
         if time.minute % 5 == 0:

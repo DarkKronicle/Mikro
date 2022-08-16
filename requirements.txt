@@ -6,3 +6,4 @@ discord~=1.7.3
 youtube-dl
 aiohttp~=3.8.1
 beautifulsoup4~=4.11.1
+pytz~=2022.2.1

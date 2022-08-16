@@ -36,7 +36,7 @@ class Chat(commands.Cog):
             return
         if message.guild.id is None or message.guild.id != 753693459369427044:
             return
-        if message.author.id in self.users:
+        if message.author.id not in self.users:
             self.score += 1
             self.users[message.author.id] = 1
 

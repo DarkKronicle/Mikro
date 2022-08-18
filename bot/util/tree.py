@@ -16,7 +16,7 @@ def get_character(dx, dy, life):
     return '@'
 
 
-class Tree:
+class Bonsai:
     """
     @author https://andai.tv/bonsai/
     """

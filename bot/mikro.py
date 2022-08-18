@@ -23,7 +23,6 @@ startup_extensions = (
     'bot.cogs.voice',
     'bot.cogs.conversation',
     'bot.cogs.minecraft',
-    'bot.cogs.chat',
     'bot.response.response_cog',
     'bot.plant.tree_cog',
     'bot.cogs.stats',

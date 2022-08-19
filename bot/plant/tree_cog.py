@@ -195,8 +195,8 @@ class Tree(commands.Cog):
                 embed.title = ctx.author.display_name
             case TreeType.channel:
                 embed.title = '#' + ctx.channel.name
-        embed.add_field(name='Water', value='{0}%'.format(tree.water // 100))
-        embed.add_field(name='Care', value='{0}%'.format(tree.care // 100))
+        embed.add_field(name='Water', value='{0}%'.format(tree.water // 10))
+        embed.add_field(name='Care', value='{0}%'.format(tree.care // 10))
         embed.add_field(name='Height', value=str(tree.height))
         embed.title = ctx.guild.name
         return embed

@@ -14,6 +14,8 @@ from bot.util import database as db
 from enum import Enum
 import random
 
+from bot.util.tree import Bonsai
+
 
 class TreeType(Enum):
 
@@ -202,6 +204,17 @@ class Tree(commands.Cog):
         embed.add_field(name='Care', value='{0}%'.format(tree.care // 10))
         embed.add_field(name='Height', value=str(tree.height))
         embed.title = ctx.guild.name
+        h = tree.height
+        if h < 5:
+            h = 6
+        elif h < 10:
+            h = 10
+        elif h < 20:
+            h = 25
+        else:
+            h = 32
+        b = Bonsai(height=h)
+        embed.description = '''```\n{0}```'''.format(b.run(life=math.ceil(h) + 1).get_string())
         return embed
 
     @commands.command(name='guildtree')

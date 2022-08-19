@@ -40,6 +40,7 @@ class Bonsai:
 
     def run(self, life=15):
         self.branch(self.width // 2, 0, life=life, max_life=life)
+        return self
 
     def branch(self, x, y, *, life=15, max_life=15, branches=0):
         branches += 1

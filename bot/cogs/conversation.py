@@ -6,7 +6,6 @@ from discord.ext.commands import Context
 from discord.ext.commands._types import BotT
 
 from bot.util.webhooker import Webhooker
-import re
 
 
 class Conversation(commands.Cog):

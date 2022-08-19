@@ -74,7 +74,7 @@ class TreeObject:
         val = val / 1000 * 2
         if val < 0:
             val = (.5 / (1 + math.exp(-5 * val)) - .25) / 5
-        h = self._height + val * ((time_util.get_utc() - self.last_height).total_seconds() / 60) / 12
+        h = self._height + val * (((time_util.get_utc() - self.last_height).total_seconds() / 60) / 12)
         return max(0.0, h)
 
     def update_height(self, val):
@@ -85,14 +85,15 @@ class TreeObject:
     def default_water(x: int, updated: datetime, slow_factor):
         if x < 10:
             return x
-        return x - ((5 * math.pow(((time_util.get_utc() - updated).total_seconds() / 60) + 8, 0.3) - 10) * 10) / slow_factor
+        return x - (math.pow(1.01, (time_util.get_utc() - updated).total_seconds() / 60) * 10) / slow_factor
 
     @staticmethod
     def default_care(x: int, updated: datetime, slow_factor):
         if x < 10:
             return x
         # We want 1.01 ^ (minutes since)
-        return x - (math.pow(1.01, (time_util.get_utc() - updated).total_seconds() / 60) * 10) / slow_factor
+        main = math.pow(1.01, (time_util.get_utc() - updated).total_seconds() / 60)
+        return x - (main * 10) / slow_factor
 
     def get_slow_factor(self):
         if self.type == TreeType.guild:
@@ -112,9 +113,10 @@ class TreeObject:
 
     @property
     def care(self):
+        val = self.care_equation(self._care, self.last_care, self.get_slow_factor())
         return math.ceil(
             max(0, min(
-                self.water_equation(self._care, self.last_care, self.get_slow_factor()), 1000
+                val, 1000
             ))
         )
 
@@ -134,23 +136,27 @@ class TreeObject:
         elif message.type == stats.MessageType.attachment:
             val = random.randint(40, 60)
         else:
-            val = random.randint(0, 10)
+            val = random.randint(10, 20)
+        match self.type:
+            case TreeType.user:
+                val = val * 4
+            case TreeType.channel:
+                val = val * 3
         self.update_water(self.water + val)
 
     async def add_care(self, stats_obj: stats.Stats, message: stats.Message):
-        messages: list[stats.Message] = await stats_obj.user_day_messages(message.guild_id, message.author_id)
-        if len(messages) == 0:
-            val = random.randint(50, 100)
-        elif len(messages) < 5:
-            val = random.randint(30, 70)
+        author: dict[stats.CooldownInterval, int] = await stats_obj.get_messages_in_cooldowns(message.guild_id, user_id=message.author_id)
+        if author.get(stats.CooldownInterval.hours_24, 0) == 0:
+            val = random.randint(40, 70)
+        elif author.get(stats.CooldownInterval.hours_1, 0) <= 2:
+            val = random.randint(10, 30)
         else:
-            channeled = list(filter(lambda x: x.channel_id == message.channel_id, messages))
-            if len(channeled) == 0:
-                val = random.randint(40, 80)
-            elif len(channeled) < 5:
-                val = random.randint(20, 50)
-            else:
-                val = random.randint(0, 3)
+            val = random.randint(0, 3)
+        match self.type:
+            case TreeType.user:
+                val = val * 4
+            case TreeType.channel:
+                val = val * 3
         self.update_care(self.care + val)
 
     def __eq__(self, other):
@@ -164,7 +170,8 @@ class TreeObject:
     def __str__(self):
         care_time: str = self.last_care.strftime("'%Y-%m-%d %H:%M:%S'")
         water_time: str = self.last_water.strftime("'%Y-%m-%d %H:%M:%S'")
-        return '({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7})'.format(self.guild_id, self.object_id, self.type.value, self.height, water_time, care_time, self.water, self.care)
+        height_time: str = self.last_height.strftime("'%Y-%m-%d %H:%M:%S'")
+        return '({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8})'.format(self.guild_id, self.object_id, self.type.value, self.height, height_time, water_time, care_time, self.water, self.care)
 
 
 class Tree(commands.Cog):
@@ -222,13 +229,14 @@ class Tree(commands.Cog):
         if time is not None and time.minute % 5 != 0:
             return
         values = [str(tree) for tree in self.updated_trees]
-        command = "INSERT INTO tree_storage(guild_id, object_id, type, height, last_water, last_care, water, care)" \
+        command = "INSERT INTO tree_storage(guild_id, object_id, type, height, last_height, last_water, last_care, water, care)" \
                   " VALUES {0} " \
                   "ON CONFLICT ON CONSTRAINT unique_tree DO UPDATE SET " \
                   "guild_id = EXCLUDED.guild_id, " \
                   "object_id = EXCLUDED.object_id, " \
                   "type = EXCLUDED.type, " \
                   "height = EXCLUDED.height, " \
+                  "last_height = EXCLUDED.last_height, " \
                   "last_water = EXCLUDED.last_water, " \
                   "last_care = EXCLUDED.last_care, " \
                   "water = EXCLUDED.water, " \
@@ -274,11 +282,11 @@ class Tree(commands.Cog):
     @cache.cache(maxsize=2048)
     async def _get_tree(self, guild_id, object_id, type, *, connection=None) -> TreeObject:
         con = connection or self.bot.pool
-        command = 'SELECT type, height, last_water, last_care, water, care FROM tree_storage WHERE guild_id = {0} AND object_id = {1};'.format(guild_id, object_id)
+        command = 'SELECT type, height, last_height, last_water, last_care, water, care FROM tree_storage WHERE guild_id = {0} AND object_id = {1};'.format(guild_id, object_id)
         row = await con.fetchrow(command)
         if not row:
             return TreeObject(guild_id, object_id, type, 0, time_util.get_utc(), time_util.get_utc(), time_util.get_utc(), 0, 0)
-        return TreeObject(guild_id, object_id, TreeType(row['type']), row['height'], row['last_water'], row['last_care'], row['water'], row['care'])
+        return TreeObject(guild_id, object_id, TreeType(row['type']), row['height'], row['last_height'], row['last_water'], row['last_care'], row['water'], row['care'])
 
     async def set_status(self):
         tree = await self.get_tree(753693459369427044, 753693459369427044, TreeType.guild)

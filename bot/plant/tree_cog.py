@@ -292,7 +292,7 @@ class Tree(commands.Cog):
         tree = await self.get_tree(753693459369427044, 753693459369427044, TreeType.guild)
         activity = discord.Activity(
             type=discord.ActivityType.playing,
-            name='with chat tree | {0}% Water | {1}% Care'.format(tree.water // 100, tree.care // 100),
+            name='with chat tree | {0}% Water | {1}% Care'.format(tree.water // 10, tree.care // 10),
         )
         await self.bot.change_presence(status=discord.Status.online, activity=activity)
 

@@ -214,7 +214,7 @@ class Tree(commands.Cog):
         else:
             h = 32
         b = Bonsai(height=h)
-        embed.description = '''```\n{0}```'''.format(b.run(life=math.ceil(h) + 1).get_string())
+        embed.description = '''```\n{0}```'''.format(b.run(life=math.ceil(tree.height) + 1).get_string())
         return embed
 
     @commands.command(name='guildtree')

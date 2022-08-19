@@ -78,6 +78,7 @@ class TreeObject:
         return max(0.0, h)
 
     def update_height(self, val):
+        val = max(val, 0)
         self._height = val
         self.last_height = time_util.get_utc()
 
@@ -101,7 +102,7 @@ class TreeObject:
         if self.type == TreeType.channel:
             return 2
         if self.type == TreeType.user:
-            return 4
+            return 3
 
     @property
     def water(self) -> int:
@@ -121,42 +122,44 @@ class TreeObject:
         )
 
     def update_care(self, value):
+        value = min(1000, max(0, value))
         self.last_care = time_util.get_utc()
         self._care = value
         self.update_height(self.height)
 
     def update_water(self, value):
+        value = min(1000, max(0, value))
         self.last_water = time_util.get_utc()
         self._water = value
         self.update_height(self.height)
 
     async def add_water(self, stats_obj: stats.Stats, message: stats.Message):
         if message.type == stats.MessageType.long:
-            val = random.randint(40, 60)
+            val = random.randint(50, 80)
         elif message.type == stats.MessageType.attachment:
-            val = random.randint(40, 60)
+            val = random.randint(50, 100)
         else:
-            val = random.randint(10, 20)
+            val = random.randint(20, 50)
         match self.type:
             case TreeType.user:
-                val = val * 4
+                val = val * 2
             case TreeType.channel:
-                val = val * 3
+                val = val * 2
         self.update_water(self.water + val)
 
     async def add_care(self, stats_obj: stats.Stats, message: stats.Message):
         author: dict[stats.CooldownInterval, int] = await stats_obj.get_messages_in_cooldowns(message.guild_id, user_id=message.author_id)
         if author.get(stats.CooldownInterval.hours_24, 0) == 0:
-            val = random.randint(40, 70)
+            val = random.randint(30, 50)
         elif author.get(stats.CooldownInterval.hours_1, 0) <= 2:
             val = random.randint(10, 30)
         else:
             val = random.randint(0, 3)
         match self.type:
             case TreeType.user:
-                val = val * 4
+                val = val * 2
             case TreeType.channel:
-                val = val * 3
+                val = val * 2
         self.update_care(self.care + val)
 
     def __eq__(self, other):

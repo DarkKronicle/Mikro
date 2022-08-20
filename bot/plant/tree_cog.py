@@ -88,7 +88,8 @@ class TreeObject:
     def default_water(x: int, updated: datetime, slow_factor):
         if x < 10:
             return x
-        return x - (math.pow(1.01, (time_util.get_utc() - updated).total_seconds() / 60) * 10) / slow_factor
+        val = (time_util.get_utc() - updated).total_seconds() / 60
+        return x - (180 / (1 + math.exp(- val / 40)) - 90) / slow_factor
 
     @staticmethod
     def default_care(x: int, updated: datetime, slow_factor):
@@ -205,9 +206,9 @@ class Tree(commands.Cog):
         embed.add_field(name='Height', value=str(tree.height))
         embed.title = ctx.guild.name
         h = tree.height
-        if h < 5:
+        if h < 8:
             h = 6
-        elif h < 10:
+        elif h < 15:
             h = 10
         elif h < 20:
             h = 25
@@ -295,7 +296,6 @@ class Tree(commands.Cog):
                 return t
         return await self._get_tree(guild_id, object_id, type, connection=connection)
 
-    @cache.cache(maxsize=2048)
     async def _get_tree(self, guild_id, object_id, type, *, connection=None) -> TreeObject:
         con = connection or self.bot.pool
         command = 'SELECT type, height, last_height, last_water, last_care, water, care FROM tree_storage WHERE guild_id = {0} AND object_id = {1};'.format(guild_id, object_id)

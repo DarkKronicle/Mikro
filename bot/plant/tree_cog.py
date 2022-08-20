@@ -76,7 +76,7 @@ class TreeObject:
         val = val / 1000 * 2
         if val < 0:
             val = (.5 / (1 + math.exp(-5 * val)) - .25) / 5
-        h = self._height + val * (((time_util.get_utc() - self.last_height).total_seconds() / 60) / 12)
+        h = self._height + val * (((time_util.get_utc() - self.last_height).total_seconds() / 60) / 60)
         return max(0.0, h)
 
     def update_height(self, val):
@@ -148,6 +148,8 @@ class TreeObject:
                 val = val * 2
             case TreeType.channel:
                 val = val * 2
+            case TreeType.guild:
+                val = val // 3
         self.update_water(self.water + val)
 
     async def add_care(self, stats_obj: stats.Stats, message: stats.Message):
@@ -163,6 +165,8 @@ class TreeObject:
                 val = val * 2
             case TreeType.channel:
                 val = val * 2
+            case TreeType.guild:
+                val = val // 3
         self.update_care(self.care + val)
 
     def __eq__(self, other):
@@ -204,7 +208,6 @@ class Tree(commands.Cog):
         embed.add_field(name='Water', value='{0}%'.format(tree.water // 10))
         embed.add_field(name='Care', value='{0}%'.format(tree.care // 10))
         embed.add_field(name='Height', value=str(tree.height))
-        embed.title = ctx.guild.name
         h = tree.height
         if h < 8:
             h = 6

@@ -96,8 +96,8 @@ class TreeObject:
         if x < 10:
             return x
         # We want 1.01 ^ (minutes since)
-        main = math.pow(1.01, (time_util.get_utc() - updated).total_seconds() / 60)
-        return x - (main * 10) / slow_factor
+        val = (time_util.get_utc() - updated).total_seconds() / 60
+        return x - (180 / (1 + math.exp(- val / 40)) - 90) / slow_factor
 
     def get_slow_factor(self):
         if self.type == TreeType.guild:

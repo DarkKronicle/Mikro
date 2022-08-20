@@ -97,6 +97,8 @@ class Reply(commands.Cog):
         )
         if len(original.attachments) > 0:
             for attach in original.attachments:
+                if attach.content_type is None:
+                    continue
                 if attach.content_type.startswith('image'):
                     embed.set_image(url=attach.url)
         embed.set_footer(text='From #{0} requested by {1}'.format(

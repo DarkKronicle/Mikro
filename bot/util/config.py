@@ -21,6 +21,9 @@ class Config:    # noqa: WPS110
             return
         self.data = toml.loads(data)    # noqa: WPS110
 
+    def get(self, item, default=None):
+        return self.data.get(item, default)
+
     def __getitem__(self, item):    # noqa: WPS110
         return self.data[item]
 

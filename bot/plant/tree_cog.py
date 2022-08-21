@@ -164,7 +164,7 @@ class TreeObject:
             case TreeType.user:
                 val = val
             case TreeType.channel:
-                val = val* 2
+                val = val * 2
             case TreeType.guild:
                 val = val // 3
         self.update_care(self.care + val)

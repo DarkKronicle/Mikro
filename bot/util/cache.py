@@ -99,6 +99,12 @@ def cache(maxsize=64, cache_object=None):  # noqa: C901,WPS212,WPS231
                 return _wrap_new_coroutine(stored_value)
             return stored_value
 
+        def _set(value, *args, **kwargs):
+            key = create_key(func, args, kwargs)
+            if inspect.isawaitable(value):
+                return _wrap_and_store_coroutine(internal_cache, key, value)
+            internal_cache[key] = value
+
         def _invalidate(*args, **kwargs):
             key = create_key(func, args, kwargs)
             if key in internal_cache:
@@ -116,6 +122,7 @@ def cache(maxsize=64, cache_object=None):  # noqa: C901,WPS212,WPS231
         wrapper.cache = internal_cache
         wrapper.invalidate = _invalidate
         wrapper.invalidate_containing = _invalidate_containing
+        wrapper.set = _set
         return wrapper
 
     return decorator

@@ -1,12 +1,14 @@
 import discord
 from discord.ext import commands
+
+from bot.mikro import Mikro
 from bot.util import embed_utils, checks
 
 
 class Utility(commands.Cog):
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: Mikro = bot
 
     @checks.is_admin()
     @commands.command('send')
@@ -29,6 +31,13 @@ class Utility(commands.Cog):
     @commands.is_owner()
     @commands.command('sync')
     async def sync_commands(self, ctx):
+        await self.bot.tree.sync()
+        await ctx.send('Done!')
+
+    @commands.is_owner()
+    @commands.command('clearcommands')
+    async def clear_commands(self, ctx):
+        self.bot.tree.clear_commands(guild=None)
         await self.bot.tree.sync()
         await ctx.send('Done!')
 

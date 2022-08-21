@@ -207,6 +207,16 @@ class String(SQLType):
         return 'VARCHAR({0.length})'.format(self)
 
 
+class TSVector(SQLType):
+    python = str
+
+    def __init__(self):
+        pass
+
+    def to_sql(self):
+        return 'tsvector'
+
+
 class Time(SQLType):
     python = datetime.time
 
@@ -355,7 +365,7 @@ class MaybeAcquire:
         self._connection = None
         self.pool = pool
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> asyncpg.Connection:
         if self.connection is None:
             self._cleanup = True
             self._connection = c = await self.pool.acquire()
@@ -373,7 +383,10 @@ class TableMeta(type):
         columns = []
 
         try:
-            table_name = kwargs['table_name']
+            if 'table_name' in kwargs:
+                table_name = kwargs['table_name']
+            else:
+                table_name = kwargs['tablename']
         except KeyError:
             table_name = name.lower()
 

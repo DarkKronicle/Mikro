@@ -9,3 +9,4 @@ beautifulsoup4~=4.11.1
 pytz~=2022.2.1
 numpy~=1.23.2
 asyncpg~=0.26.0
+tqdm~=4.64.0

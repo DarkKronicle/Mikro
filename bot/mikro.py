@@ -32,6 +32,7 @@ startup_extensions = (
 class Mikro(commands.Bot):
 
     def __init__(self, pool, **kwargs):
+        self.debug = bot_global.config.get('debug', False)
         allowed_mentions = discord.AllowedMentions(roles=False, everyone=False, users=True)
         self.pool = pool
         intents = discord.Intents(
@@ -45,7 +46,7 @@ class Mikro(commands.Bot):
             message_content=True,
         )
         super().__init__(
-            command_prefix='&',
+            command_prefix='&' if not self.debug else '$',
             intents=intents,
             case_insensitive=True,
             owner_id=523605852557672449,
@@ -55,6 +56,7 @@ class Mikro(commands.Bot):
         )
         self.boot = datetime.now()
         self.loops = {}
+        self.on_load = []
 
     def get_main_guild(self):
         return self.get_guild(753693459369427044)
@@ -72,6 +74,9 @@ class Mikro(commands.Bot):
     def run(self):
         super().run(bot_global.config['bot_token'], reconnect=True)
 
+    def add_on_load(self, function):
+        self.on_load.append(function)
+
     def add_loop(self, name, function):
         """
         Adds a loop to the thirty minute loop. Needs to take in a function with a parameter time with async.
@@ -84,6 +89,10 @@ class Mikro(commands.Bot):
         """
         if name in self.loops:
             self.loops.pop(name)
+
+    @property
+    def thread_handler(self):
+        return self.get_cog('ThreadCommands')
 
     @tasks.loop(minutes=1)
     async def time_loop(self):
@@ -115,6 +124,8 @@ class Mikro(commands.Bot):
         await self.wait_until_ready()
         self.setup_loop.start()
         print('Ready!')
+        for function in self.on_load:
+            await function()
 
     async def on_command_error(self, ctx, error, *, raise_err=True):  # noqa: WPS217
         if isinstance(error, commands.CommandNotFound):

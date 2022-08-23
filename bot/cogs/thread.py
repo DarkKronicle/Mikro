@@ -284,8 +284,11 @@ class ThreadCommands(commands.Cog):
         if not isinstance(message.channel, discord.Thread):
             return
         if message.channel.id in self.pin and not message.is_system():
-            self.pin.remove(message.channel.id)
-            await message.pin()
+            try:
+                await message.pin()
+                self.pin.remove(message.channel.id)
+            except:
+                pass
         await asyncio.sleep(0.3)
         command = 'INSERT INTO thread_messages(thread, message_id, message_content, message_content_tsv) VALUES ($1, $2, $3, to_tsvector($3)) ON CONFLICT DO NOTHING;'
         async with self.lock:

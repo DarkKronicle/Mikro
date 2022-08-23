@@ -185,7 +185,7 @@ class ThreadCommands(commands.Cog):
     async def _update_thread_history(self, thread: discord.Thread, last_message_id: Optional[int] = None):
         command = 'INSERT INTO thread_messages(thread, message_id, message_content, message_content_tsv) VALUES ($1, $2, $3, to_tsvector($3)) ON CONFLICT DO NOTHING;'
         values = []
-        async for message in thread.history(limit=None, after=discord.Object(last_message_id), oldest_first=True):
+        async for message in thread.history(limit=None, after=discord.Object(last_message_id) if last_message_id else None, oldest_first=True):
             values.append((thread.id, message.id, self.get_content(message)))
         async with db.MaybeAcquire(pool=self.bot.pool) as con:
             await con.executemany(command, values)

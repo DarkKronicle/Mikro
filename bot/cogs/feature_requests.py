@@ -180,14 +180,19 @@ class FeatureRequest:
             await con.execute(command, self.message, self.thread_id)
         await self.edit_embed()
 
+    async def update_decided(self, decided):
+        self.decided = decided
+        command = "UPDATE feature_requests SET decided = $1 WHERE thread_id = $2;"
+        async with db.MaybeAcquire(pool=self.bot.pool) as con:
+            await con.execute(command, self.decided.value, self.thread_id)
+        await self.edit_embed()
+
     async def _sync_upvotes(self):
-        print(self._upvotes)
         command = 'UPDATE feature_requests SET upvotes = $1 WHERE thread_id = $2;'
         async with db.MaybeAcquire(pool=self.bot.pool) as con:
             await con.execute(command, self._upvotes, self.thread_id)
 
     async def _sync_downvotes(self):
-        print(self._downvotes)
         command = 'UPDATE feature_requests SET downvotes = $1 WHERE thread_id = $2;'
         async with db.MaybeAcquire(pool=self.bot.pool) as con:
             await con.execute(command, self._downvotes, self.thread_id)
@@ -374,6 +379,20 @@ class FeatureRequests(commands.Cog):
             return
         await ctx.defer(ephemeral=False)
         await self.requests[ctx.channel.id].update_message(message)
+        await ctx.send('Staff message changed!')
+
+    @feature_group.command(name='decide', description="Set decision status (if staff)")
+    async def description_command(self, ctx: Context, *, decision: int):
+        if not isinstance(ctx.channel, discord.Thread):
+            await ctx.defer(ephemeral=True)
+            await ctx.send('You are not in a thread!')
+            return
+        if not ctx.author.id not in self.bot.owner_ids:
+            await ctx.defer(ephemeral=True)
+            await ctx.send('You are not staff!')
+            return
+        await ctx.defer(ephemeral=False)
+        await self.requests[ctx.channel.id].update_decided(DecidedType(decision))
         await ctx.send('Staff message changed!')
 
 

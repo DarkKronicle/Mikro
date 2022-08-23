@@ -139,7 +139,6 @@ class ThreadCommands(commands.Cog):
         return perms.view_channel and perms.read_message_history
 
     async def update_threads(self, *args) -> None:
-        return
         time = args[0] if len(args) > 0 else None
         if time is not None and (not self.setup or time.minute != 0 or time.hour % 6 != 0):
             return

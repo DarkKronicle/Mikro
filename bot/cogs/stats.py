@@ -239,7 +239,7 @@ class Stats(commands.Cog):
             return
         insert = [str(m) for m in self.cache]
 
-        command = 'INSERT INTO messages(guild_id, channel_id, user_id, message_id, time, type) VALUES {0};'
+        command = 'INSERT INTO messages(guild_id, channel_id, user_id, message_id, time, type) VALUES {0} ON CONFLICT DO NOTHING;'
         command = command.format(', '.join(insert))
         async with db.MaybeAcquire(pool=self.bot.pool) as con:
             await con.execute(command)

@@ -130,6 +130,7 @@ class ThreadCommands(commands.Cog):
         self.bot.add_on_load(self.update_threads)
         self.setup = False
         self.lock = asyncio.Lock()
+        self.pin = []
 
     @staticmethod
     def is_channel_public(channel: discord.TextChannel):
@@ -138,6 +139,7 @@ class ThreadCommands(commands.Cog):
         return perms.view_channel and perms.read_message_history
 
     async def update_threads(self, *args) -> None:
+        return
         time = args[0] if len(args) > 0 else None
         if time is not None and (not self.setup or time.minute != 0 or time.hour % 6 != 0):
             return
@@ -274,7 +276,7 @@ class ThreadCommands(commands.Cog):
 
     @commands.Cog.listener()
     async def on_thread_create(self, thread: discord.Thread):
-        await thread.starter_message.pin()
+        self.pin.append(thread.id)
         async with self.lock:
             await self.sync_thread(await ThreadData.from_thread(thread), update_if_exists=False)
 
@@ -282,8 +284,11 @@ class ThreadCommands(commands.Cog):
     async def on_message(self, message: discord.Message):
         if not isinstance(message.channel, discord.Thread):
             return
+        if message.channel.id in self.pin and not message.is_system():
+            self.pin.remove(message.channel.id)
+            await message.pin()
         await asyncio.sleep(0.3)
-        command = 'INSERT INTO thread_messages(thread, message_id, message_content, message_content_tsv) VALUES ($1, $2, $3, to_tsvector($3));'
+        command = 'INSERT INTO thread_messages(thread, message_id, message_content, message_content_tsv) VALUES ($1, $2, $3, to_tsvector($3)) ON CONFLICT DO NOTHING;'
         async with self.lock:
             thread: ThreadData = await self.get_thread(message.channel.id)
             if thread is None:
@@ -311,24 +316,27 @@ class ThreadCommands(commands.Cog):
         async with db.MaybeAcquire(pool=self.bot.pool) as con:
             await con.execute(command, payload.thread_id)
 
-    async def cog_check(self, ctx: commands.Context) -> bool:
+    async def check(self, ctx: commands.Context) -> bool:
         channel: discord.Thread = ctx.channel
         if not isinstance(channel, discord.Thread):
             await ctx.send('You are not in a thread!')
             return False
         if await self.bot.is_owner(ctx.author):
             return True
-
+        thread: ThreadData = await self.get_thread(ctx.channel.id)
+        if thread.owner_id == ctx.author.id:
+            return True
         await ctx.send('You are not the owner of the thread!')
         return False
 
-    @commands.group(name='thread', invoke_without_command=True)
+    @commands.hybrid_group(name='thread')
     async def thread_group(self, ctx: commands.Context):
-        channel: discord.Thread = ctx.channel
-        await ctx.send('Current thread is owned by you and named {0} (id: {1})'.format(channel.name, channel.id))
+        pass
 
-    @thread_group.command(name='rename')
+    @thread_group.command(name='rename', description='Renames the current thread')
     async def rename(self, ctx: commands.Context, *, name: str):
+        if not self.check(ctx):
+            return
         channel: discord.Thread = ctx.channel
         if '[' in name or ']' in name:
             await ctx.send('Sorry, `[` and `]` are not allowed in channel names.')
@@ -338,9 +346,12 @@ class ThreadCommands(commands.Cog):
         if prefix:
             name = prefix.group() + name
         await channel.edit(name=name)
+        await ctx.send('Updated!', ephemeral=True)
 
-    @thread_group.command(name='pin')
+    @thread_group.command(name='pin', description='Pins a message in the current thread')
     async def pin(self, ctx: commands.Context, *, pin: discord.Message):
+        if not self.check(ctx):
+            return
         channel: discord.Thread = ctx.channel
         if isinstance(pin, discord.PartialMessage):
             pin = await pin.fetch()
@@ -348,6 +359,7 @@ class ThreadCommands(commands.Cog):
             await pin.pin()
         else:
             await channel.send('That message is not in the current thread!')
+        await ctx.send('Pinned!', ephemeral=True)
 
 
 async def setup(bot):

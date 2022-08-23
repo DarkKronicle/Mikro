@@ -15,7 +15,7 @@ from bot import response
 from bot.core.context import Context
 
 startup_extensions = (
-    'bot.cogs.suggestions',
+    'bot.cogs.feature_requests',
     'bot.cogs.thread',
     'bot.cogs.utility',
     'bot.cogs.reaction',

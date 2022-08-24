@@ -202,12 +202,14 @@ class Tree(commands.Cog):
             case TreeType.guild:
                 embed.title = ctx.guild.name
             case TreeType.user:
-                embed.title = ctx.author.display_name
+                embed.title = ctx.guild.get_member(tree.object_id).display_name
             case TreeType.channel:
-                embed.title = '#' + ctx.channel.name
+                embed.title = '#' + ctx.guild.get_channel(tree.object_id).name
+
+        embed.title = 'Tree for ' + embed.title
         embed.add_field(name='Water', value='{0}%'.format(tree.water // 10))
         embed.add_field(name='Care', value='{0}%'.format(tree.care // 10))
-        embed.add_field(name='Height', value=str(tree.height))
+        embed.add_field(name='Height', value='{0:.2f}'.format(tree.height))
         h = tree.height
         if h < 8:
             h = 6
@@ -217,7 +219,7 @@ class Tree(commands.Cog):
             h = 25
         else:
             h = 32
-        b = Bonsai(height=h)
+        b = Bonsai(height=h, width=32)
         embed.description = '''```\n{0}```'''.format(b.run(life=min(math.ceil(tree.height) + 1, 50)).get_string())
         return embed
 
@@ -234,7 +236,7 @@ class Tree(commands.Cog):
         if tree is None:
             tree = ctx.author
         if isinstance(tree, discord.Member):
-            tree = await self.get_tree(ctx.guild.id, ctx.author.id, TreeType.user)
+            tree = await self.get_tree(ctx.guild.id, tree.id, TreeType.user)
         else:
             tree = await self.get_tree(ctx.guild.id, tree.id, TreeType.channel)
         embed = self.gen_tree(ctx, tree)

@@ -218,7 +218,7 @@ class Tree(commands.Cog):
         else:
             h = 32
         b = Bonsai(height=h)
-        embed.description = '''```\n{0}```'''.format(b.run(life=math.ceil(tree.height) + 1).get_string())
+        embed.description = '''```\n{0}```'''.format(b.run(life=min(math.ceil(tree.height) + 1, 50)).get_string())
         return embed
 
     @commands.command(name='guildtree')
@@ -230,7 +230,9 @@ class Tree(commands.Cog):
 
     @commands.command(name='tree')
     @commands.guild_only()
-    async def tree_stats(self, ctx: Context, *, tree: Union[discord.Member, discord.TextChannel]):
+    async def tree_stats(self, ctx: Context, *, tree: Union[None, discord.Member, discord.TextChannel] = None):
+        if tree is None:
+            tree = ctx.author
         if isinstance(tree, discord.Member):
             tree = await self.get_tree(ctx.guild.id, ctx.author.id, TreeType.user)
         else:

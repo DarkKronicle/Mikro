@@ -236,7 +236,7 @@ class Tree(commands.Cog):
         if isinstance(tree, discord.Member):
             tree = await self.get_tree(ctx.guild.id, ctx.author.id, TreeType.user)
         else:
-            tree = await self.get_tree(ctx.guild.id, ctx.channel.id, TreeType.channel)
+            tree = await self.get_tree(ctx.guild.id, tree.id, TreeType.channel)
         embed = self.gen_tree(ctx, tree)
         await ctx.send(embed=embed)
 

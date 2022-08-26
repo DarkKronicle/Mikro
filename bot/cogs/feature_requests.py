@@ -160,7 +160,7 @@ class FeatureRequest:
             total=self.total
         )
         if self.decided != DecidedType.undecided:
-            embed.description += "**Status:** {0}".format(self.decided.name.capitalize())
+            embed.description += "\n**Status:** {0}".format(self.decided.name.capitalize())
         if self.message:
             embed.description += "\n\n__**Response:**__\n{0}".format(self.message)
         embed.set_author(icon_url=owner.display_avatar.url, name=owner.display_name)

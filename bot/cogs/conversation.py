@@ -26,8 +26,8 @@ class Conversation(commands.Cog):
 
     @move.command(name='from')
     async def move_channel(self, ctx: commands.Context, target: typing.Union[discord.TextChannel, discord.Message], destination: typing.Optional[discord.TextChannel] = None, amount: int = 10):
-        if amount > 30:
-            amount = 20
+        if amount > 100:
+            amount = 100
         if amount < 1:
             return
         if destination is None:

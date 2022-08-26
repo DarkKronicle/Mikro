@@ -26,6 +26,7 @@ startup_extensions = (
     'bot.response.response_cog',
     'bot.plant.tree_cog',
     'bot.cogs.stats',
+    'bot.cogs.search',
 )
 
 

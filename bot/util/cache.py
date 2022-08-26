@@ -119,10 +119,15 @@ def cache(maxsize=64, cache_object=None):  # noqa: C901,WPS212,WPS231
                     # No other function to replicate del
                     del internal_cache[cache_key]  # noqa: WPS420,WPS529
 
+        def _args_exist(*args, **kwargs):
+            key = create_key(func, args, kwargs)
+            return key in internal_cache
+
         wrapper.cache = internal_cache
         wrapper.invalidate = _invalidate
         wrapper.invalidate_containing = _invalidate_containing
         wrapper.set = _set
+        wrapper.exists = _args_exist()
         return wrapper
 
     return decorator

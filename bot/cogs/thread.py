@@ -5,6 +5,7 @@ from typing import Optional
 import discord
 from discord.ext import commands
 
+from bot.core.context import Context
 from bot.mikro import Mikro
 from bot.util import cache
 import re
@@ -17,6 +18,7 @@ class Threads(db.Table, table_name='threads'):
     guild_id = db.Column(db.Integer(big=True), index=True)
     thread_id = db.Column(db.Integer(big=True), unique=True, index=True)
     owner_id = db.Column(db.Integer(big=True), nullable=False)
+    channel_id = db.Column(db.Integer(big=True))
     last_message_id = db.Column(db.Integer(big=True))
     title = db.Column(db.String(), nullable=False)
     starting_message = db.Column(db.String())
@@ -45,9 +47,10 @@ class ThreadMessages(db.Table, table_name='thread_messages'):
 
 class ThreadData:
 
-    def __init__(self, guild: discord.Guild, thread_id, owner_id, title, starting_message, tags, description, disable_archive, public, last_message_id):
+    def __init__(self, guild: discord.Guild, thread_id, channel_id, owner_id, title, starting_message, tags, description, disable_archive, public, last_message_id):
         self.guild: discord.Guild = guild
         self.thread_id: int = thread_id
+        self.channel_id: int = channel_id
         self.owner_id: int = owner_id
         self.title: str = title
         self.starting_message: str = starting_message
@@ -59,11 +62,11 @@ class ThreadData:
 
     @classmethod
     def from_query(cls, bot: Mikro, row):
-        return ThreadData(bot.get_guild(row['guild_id']), row['thread_id'], row['owner_id'], row['title'], row['starting_message'], row['tags'], row['description'], row['disable_archive'], row['public'], row['last_message_id'])
+        return ThreadData(bot.get_guild(row['guild_id']), row['thread_id'], row['channel_id'], row['owner_id'], row['title'], row['starting_message'], row['tags'], row['description'], row['disable_archive'], row['public'], row['last_message_id'])
 
     @property
     def args(self):
-        return self.guild.id, self.thread_id, self.owner_id, self.title, self.starting_message, self.tags, self.description, self.disable_archive, self.public, self.last_message_id
+        return self.guild.id, self.thread_id, self.channel_id, self.owner_id, self.title, self.starting_message, self.tags, self.description, self.disable_archive, self.public, self.last_message_id
 
     @property
     def owner(self) -> Optional[discord.Member]:
@@ -143,7 +146,7 @@ class ThreadCommands(commands.Cog):
         if time is not None and (not self.setup or time.minute != 0 or time.hour % 6 != 0):
             return
         self.setup = True
-        command = 'INSERT INTO threads(guild_id, thread_id, owner_id, title, public) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (thread_id) DO UPDATE SET title = EXCLUDED.title;'
+        command = 'INSERT INTO threads(guild_id, thread_id, channel_id, owner_id, title, public) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (thread_id) DO UPDATE SET title = EXCLUDED.title, channel_id = EXCLUDED.channel_id;'
         values = []
         guild = self.bot.get_main_guild()
         guild_threads = []
@@ -156,7 +159,7 @@ class ThreadCommands(commands.Cog):
                 async for thread in channel.archived_threads(limit=None, private=True):
                     guild_threads.append(thread)
         for thread in guild_threads:
-            values.append((thread.guild.id, thread.id, thread.owner_id, thread.name, self.is_channel_public(thread.parent)))
+            values.append((thread.guild.id, thread.id, thread.parent_id, thread.owner_id, thread.name, self.is_channel_public(thread.parent)))
         logging.info('Found {0} threads'.format(len(values)))
         if not values:
             return
@@ -256,7 +259,7 @@ class ThreadCommands(commands.Cog):
 
     async def sync_thread(self, thread: ThreadData, update_if_exists=True):
         async with db.MaybeAcquire(pool=self.bot.pool) as con:
-            command = 'INSERT INTO threads(guild_id, thread_id, owner_id, title, starting_message, tags, description, disable_archive, public, last_message_id) VALUES ' \
+            command = 'INSERT INTO threads(guild_id, thread_id, channel_id, owner_id, title, starting_message, tags, description, disable_archive, public, last_message_id) VALUES ' \
                       '($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) ON CONFLICT '
 
             if update_if_exists:
@@ -277,7 +280,10 @@ class ThreadCommands(commands.Cog):
     async def on_thread_create(self, thread: discord.Thread):
         self.pin.append(thread.id)
         async with self.lock:
+            if self.get_thread.exists(thread.id):
+                return
             await self.sync_thread(await ThreadData.from_thread(thread), update_if_exists=False)
+        await thread.send("""{0} feel free to use `/thread` to customize this thread!""".format(thread.owner.mention).replace('\t', '').replace('  ', ''))
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -318,7 +324,7 @@ class ThreadCommands(commands.Cog):
         async with db.MaybeAcquire(pool=self.bot.pool) as con:
             await con.execute(command, payload.thread_id)
 
-    async def check(self, ctx: commands.Context) -> bool:
+    async def check(self, ctx: Context) -> bool:
         channel: discord.Thread = ctx.channel
         if not isinstance(channel, discord.Thread):
             await ctx.send('You are not in a thread!')
@@ -332,11 +338,11 @@ class ThreadCommands(commands.Cog):
         return False
 
     @commands.hybrid_group(name='thread')
-    async def thread_group(self, ctx: commands.Context):
+    async def thread_group(self, ctx: Context):
         pass
 
     @thread_group.command(name='rename', description='Renames the current thread')
-    async def rename(self, ctx: commands.Context, *, name: str):
+    async def rename(self, ctx: Context, *, name: str):
         if not self.check(ctx):
             return
         channel: discord.Thread = ctx.channel
@@ -351,7 +357,7 @@ class ThreadCommands(commands.Cog):
         await ctx.send('Updated!', ephemeral=True)
 
     @thread_group.command(name='pin', description='Pins a message in the current thread')
-    async def pin(self, ctx: commands.Context, *, pin: discord.Message):
+    async def pin(self, ctx: Context, *, pin: discord.Message):
         if not self.check(ctx):
             return
         channel: discord.Thread = ctx.channel

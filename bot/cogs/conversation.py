@@ -55,7 +55,7 @@ class Conversation(commands.Cog):
             return
 
         webhooker = Webhooker(destination)
-        async for message in channel.history(limit=amount, oldest_first=False):
+        async for message in channel.history(limit=amount, oldest_first=False, before=target if isinstance(target, discord.Message) else None):
             messages.append(message)
         messages.reverse()
         await webhooker.create_thread_with_messages(messages, creator=ctx.author)

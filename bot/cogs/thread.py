@@ -267,7 +267,7 @@ class ThreadCommands(commands.Cog):
     async def sync_thread(self, thread: ThreadData, update_if_exists=True):
         async with db.MaybeAcquire(pool=self.bot.pool) as con:
             command = 'INSERT INTO threads(guild_id, thread_id, channel_id, owner_id, title, starting_message, tags, description, disable_archive, public, last_message_id) VALUES ' \
-                      '($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) ON CONFLICT '
+                      '($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) ON CONFLICT '
 
             if update_if_exists:
                 command += '(thread_id) DO UPDATE SET ' \

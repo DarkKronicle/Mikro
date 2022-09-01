@@ -1,7 +1,12 @@
+import discord
 from discord.ext import commands
 
 
 # MPL v2 https://github.com/Rapptz/RoboDanny/blob/rewrite/cogs/utils/context.py
+
+from bot.ui.modals import PromptModal
+
+
 class _ContextDBAcquire:
     __slots__ = ('ctx', 'timeout')
 
@@ -62,5 +67,40 @@ class Context(commands.Context):
         if self._db is None:
             self._db = await self.pool.acquire(timeout=timeout)
         return self._db
+
+    async def prompt(
+            self,
+            *,
+            title="Text",
+            placeholder="Enter here...",
+            default_text="",
+            label="Label",
+            text_style: discord.TextStyle = discord.TextStyle.long,
+            timeout: int = 30,
+            min_length: int = 1,
+            max_length=4000,
+    ):
+        if self.interaction is None:
+            raise commands.CommandError("There is no interaction in this context!")
+
+        def user_check(prompt_modal: PromptModal, prompt_interaction: discord.Interaction):
+            return prompt_interaction.user.id == self.author.id
+
+        response: discord.InteractionResponse = self.interaction.response
+        text_input = discord.ui.TextInput(
+            label=label, style=text_style, required=True, placeholder=placeholder, default=default_text, min_length=min_length, max_length=max_length
+        )
+        modal = PromptModal(
+            title=title,
+            timeout=timeout,
+            check=user_check,
+            inputs=[text_input]
+        )
+        await response.send_modal(modal)
+        await modal.wait()
+        if not modal.done:
+            modal.stop()
+            return None, None
+        return text_input.value, modal.interaction
 
 

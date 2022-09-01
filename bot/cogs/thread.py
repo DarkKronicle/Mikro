@@ -142,6 +142,10 @@ class ThreadCommands(commands.Cog):
         return perms.view_channel and perms.read_message_history
 
     async def update_threads(self, *args) -> None:
+
+        if self.bot.debug:
+            return
+
         time = args[0] if len(args) > 0 else None
         if time is not None and (not self.setup or time.minute != 0 or time.hour % 6 != 0):
             return
@@ -255,6 +259,9 @@ class ThreadCommands(commands.Cog):
         command = 'SELECT * FROM threads WHERE thread_id = $1;'
         async with db.MaybeAcquire(pool=self.bot.pool) as con:
             row = await con.fetchrow(command, thread_id)
+        if row is None:
+            await self.sync_thread(await ThreadData.from_thread(thread_id), update_if_exists=False)
+            return await self.get_thread(thread_id)
         return ThreadData.from_query(self.bot, row)
 
     async def sync_thread(self, thread: ThreadData, update_if_exists=True):
@@ -368,6 +375,15 @@ class ThreadCommands(commands.Cog):
         else:
             await channel.send('That message is not in the current thread!')
         await ctx.send('Pinned!', ephemeral=True)
+
+    @thread_group.command(name='persistent', description='Makes it so a thread never archives (if you have perms)')
+    async def set_persistent(self, ctx: Context, *, value: bool):
+        if not await self.bot.is_owner(ctx.author):
+            await ctx.send("You don't have perms!")
+            return
+        thread: ThreadData = await self.get_thread(ctx.channel.id)
+        thread.disable_archive = value
+        await self.sync_thread(thread)
 
 
 async def setup(bot):

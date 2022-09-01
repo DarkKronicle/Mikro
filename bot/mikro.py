@@ -27,6 +27,7 @@ startup_extensions = (
     'bot.plant.tree_cog',
     'bot.cogs.stats',
     'bot.cogs.search',
+    # 'bot.cogs.embed_helper',
 )
 
 

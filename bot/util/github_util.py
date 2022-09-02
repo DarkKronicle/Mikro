@@ -256,7 +256,7 @@ class GithubClient:
         release = await self.get_recent_release()
         if release:
             timestamp = self.iso_to_seconds(release['created_at'])
-            value = '**[{0}]({1})** <t:{2}:f>'.format(release['name'], release['html_url'], timestamp)
+            value = '**[{0}]({1})** <t:{2}:R>'.format(release['name'], release['html_url'], timestamp)
             body = release.get('body', None)
             if body:
                 if len(body) > 30:

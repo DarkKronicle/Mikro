@@ -384,6 +384,7 @@ class ThreadCommands(commands.Cog):
         thread: ThreadData = await self.get_thread(ctx.channel.id)
         thread.disable_archive = value
         await self.sync_thread(thread)
+        await ctx.send('Done!')
 
 
 async def setup(bot):

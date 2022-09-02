@@ -1,6 +1,9 @@
 import discord
 from typing import Optional, Any, Tuple, Callable, Union
+
 from bot.util import formatter
+import base64
+import json
 
 
 class Embed(discord.Embed):
@@ -25,8 +28,16 @@ class Embed(discord.Embed):
         self.inline = inline
         self.truncate_append = truncate_append
         self.field_formatter = value_formatter
+        self.active_description = True
+        self.active_thumbnail = True
+        self.active_image = True
+        self.active_author = True
+        self.active_title = True
+        self.active_url = True
         super().__init__(**kwargs)
         self.set_fields(fields)
+        if desc:
+            self.set_description(desc)
 
     def set_fields(self, fields: Union[Tuple[Any, Any], Any], *, value_formatter: Optional[Callable] = None, inline: Optional[bool] = None):
         self.clear_fields()
@@ -48,10 +59,11 @@ class Embed(discord.Embed):
         self.set_description(description)
 
     def set_description(
-            self, description: str, *, max_description: Optional[int] = None, truncate_append: Optional[str] = None, description_formatter: Optional[str] = None,
+            self, description: Union[str, None], *, max_description: Optional[int] = None, truncate_append: Optional[str] = None, description_formatter: Optional[str] = None,
     ):
         if description is None:
             self._description = ''
+            # Setting it blank makes it easier to modify it, but on `to_dict` None/empty are the same
             return
         if description_formatter is None:
             description_formatter = self.description_formatter
@@ -108,3 +120,53 @@ class Embed(discord.Embed):
         fields = self.fields
         fields.sort(key=key, reverse=reverse)
         self.set_fields(fields)
+
+    def to_base64(self) -> str:
+        return base64.b64encode(json.dumps(self.to_dict()).encode('utf-8')).decode('utf-8')
+
+    @classmethod
+    def from_base64(cls, s: str):
+        data = base64.b64decode(s.encode('utf-8')).decode('utf-8')
+        return cls.from_dict(json.loads(data))
+
+    def set_everything(self, val: bool):
+        self.active_title = val
+        self.active_description = val
+        self.active_url = val
+        self.active_image = val
+        self.active_thumbnail = val
+        self.active_author = val
+
+    def set_active_title(self, val):
+        self.active_title = val
+
+    def set_active_description(self, val: bool):
+        self.active_description = val
+
+    def set_active_url(self, val: bool):
+        self.active_url = val
+
+    def set_active_image(self, val: bool):
+        self.active_image = val
+
+    def set_active_thumbnail(self, val: bool):
+        self.active_thumbnail = val
+
+    def set_active_author(self, val: bool):
+        self.active_author = val
+
+    def to_dict(self):
+        data = super().to_dict()
+        if not self.active_description:
+            data.pop('description', None)
+        if not self.active_url:
+            data.pop('url', None)
+        if not self.active_title:
+            data.pop('title', None)
+        if not self.active_author:
+            data.pop('author', None)
+        if not self.active_thumbnail:
+            data.pop('thumbnail', None)
+        if not self.active_image:
+            data.pop('image', None)
+        return data

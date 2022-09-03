@@ -39,9 +39,9 @@ class Embed(discord.Embed):
         if desc:
             self.set_description(desc)
 
-    def __new__(cls):
+    def __new__(cls, *args, **kwargs):
         obj = super().__new__(cls)
-        obj.__init__()
+        obj.__init__(*args, **kwargs)
         return obj
 
     def set_fields(self, fields: Union[Tuple[Any, Any], Any], *, value_formatter: Optional[Callable] = None, inline: Optional[bool] = None):

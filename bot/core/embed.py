@@ -149,12 +149,12 @@ class Embed(discord.Embed):
         # try to fill in the more rich fields
 
         try:
-            self._colour = Colour(value=data['color'])
+            self._colour = discord.Colour(value=data['color'])
         except KeyError:
             pass
 
         try:
-            self._timestamp = utils.parse_time(data['timestamp'])
+            self._timestamp = discord.utils.parse_time(data['timestamp'])
         except KeyError:
             pass
 

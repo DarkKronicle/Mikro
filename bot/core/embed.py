@@ -39,11 +39,6 @@ class Embed(discord.Embed):
         if desc:
             self.set_description(desc)
 
-    def __new__(cls, *args, **kwargs):
-        obj = super().__new__(cls)
-        obj.__init__(*args, **kwargs)
-        return obj
-
     def set_fields(self, fields: Union[Tuple[Any, Any], Any], *, value_formatter: Optional[Callable] = None, inline: Optional[bool] = None):
         self.clear_fields()
         self.append_fields(fields, value_formatter=value_formatter, inline=inline)
@@ -132,7 +127,46 @@ class Embed(discord.Embed):
     @classmethod
     def from_base64(cls, s: str):
         data = base64.b64decode(s.encode('utf-8')).decode('utf-8')
-        return cls.from_dict(json.loads(data))
+        data = json.loads(data)
+        self = cls()
+
+        # fill in the basic fields
+
+        self.title = data.get('title', None)
+        self.type = data.get('type', None)
+        self.description = data.get('description', None)
+        self.url = data.get('url', None)
+
+        if self.title is not None:
+            self.title = str(self.title)
+
+        if self.description is not None:
+            self.description = str(self.description)
+
+        if self.url is not None:
+            self.url = str(self.url)
+
+        # try to fill in the more rich fields
+
+        try:
+            self._colour = Colour(value=data['color'])
+        except KeyError:
+            pass
+
+        try:
+            self._timestamp = utils.parse_time(data['timestamp'])
+        except KeyError:
+            pass
+
+        for attr in ('thumbnail', 'video', 'provider', 'author', 'fields', 'image', 'footer'):
+            try:
+                value = data[attr]
+            except KeyError:
+                continue
+            else:
+                setattr(self, '_' + attr, value)
+
+        return self
 
     def set_everything(self, val: bool):
         self.active_title = val

@@ -39,6 +39,11 @@ class Embed(discord.Embed):
         if desc:
             self.set_description(desc)
 
+    def __new__(cls):
+        obj = super().__new__(cls)
+        obj.__init__()
+        return obj
+
     def set_fields(self, fields: Union[Tuple[Any, Any], Any], *, value_formatter: Optional[Callable] = None, inline: Optional[bool] = None):
         self.clear_fields()
         self.append_fields(fields, value_formatter=value_formatter, inline=inline)
@@ -170,3 +175,6 @@ class Embed(discord.Embed):
         if not self.active_image:
             data.pop('image', None)
         return data
+
+    def set_title(self, title):
+        self.title = title

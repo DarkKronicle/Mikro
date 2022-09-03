@@ -11,6 +11,7 @@ class MultiView(discord.ui.View):
         super().__init__(timeout=timeout)
         self.message: discord.Message = message
         self._views: list[MultiView] = []
+        self._parent_interaction: discord.Interaction = None
 
     async def on_timeout(self) -> None:
         await self.clean_up()
@@ -22,12 +23,18 @@ class MultiView(discord.ui.View):
                 continue
             await v.clean_up()
         try:
-            await self.message.delete()
+            if self._parent_interaction is not None:
+                await self._parent_interaction.delete_original_response()
+            else:
+                await self.message.delete()
         except:
             # If the message is already deleted don't worry
             pass
 
-    async def reply(self, *, view: MultiView = None, **message_kwargs):
+    async def reply(self, *, interaction: discord.Interaction = None, view: MultiView = None, **message_kwargs):
         if view is not None:
             self._views.append(view)
-        await self.message.channel.send(**message_kwargs, reference=self.message)
+        if interaction:
+            view._parent_interaction = interaction
+            return await interaction.response.send_message(view=view, **message_kwargs)
+        return await self.message.channel.send(view=view, **message_kwargs, reference=self.message)

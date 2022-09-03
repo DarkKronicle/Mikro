@@ -1,22 +1,40 @@
+import traceback
 from enum import Enum
-from typing import Optional, Any
+from io import StringIO
+from typing import Optional, Any, Union
 
 import discord
-from discord import Interaction
+from discord import Interaction, ButtonStyle, Emoji, PartialEmoji
 from discord.ext import commands
 
 from bot.core.context import Context
 from bot.core.embed import Embed
 from bot.mikro import Mikro
+from bot.ui.modals import PromptModal
+from bot.ui.select import SelectMenu
 from bot.ui.view import MultiView
 import aiohttp
 
 
+class Editables(Enum):
+
+    Title = "Edit the Title"
+    Description = "Edit the description"
+    Author = "Edit the author"
+    # URL = "Edit the URL"
+    Image = "Edit the image"
+    Thumbnail = "Edit the thumbnail"
+    AddField = "Add field"
+    DeleteField = "Delete field"
+    # Special case for editing fields
+
+
 class Field(Enum):
+
     Title = 'Turn on/off the title of the embed'
     Description = 'Turn on/off the description of the embed'
     Author = 'Turn on/off the author field of the embed'
-    URL = 'Turn on/off the URL that clicking on the title goes to'
+    # URL = 'Turn on/off the URL that clicking on the title goes to'
     Image = 'Turn on/off the main image of the Embed'
     Thumbnail = 'Turn on/off the image in the upper right corner'
 
@@ -26,8 +44,8 @@ class Field(Enum):
                 return embed.active_title
             case Field.Description:
                 return embed.active_description
-            case Field.URL:
-                return embed.active_url
+            # case Field.URL:
+            #     return embed.active_url
             case Field.Image:
                 return embed.active_image
             case Field.Thumbnail:
@@ -41,8 +59,8 @@ class Field(Enum):
                 return embed.set_active_title(val)
             case Field.Description:
                 return embed.set_active_description(val)
-            case Field.URL:
-                return embed.set_active_url(val)
+            # case Field.URL:
+            #     return embed.set_active_url(val)
             case Field.Image:
                 return embed.set_active_image(val)
             case Field.Thumbnail:
@@ -58,21 +76,147 @@ async def get_default_embed(user: discord.User):
                     "and then use the second to modify the values.",
         color=discord.Color.blurple()
     )
-    embed.url = 'https://github.com/DarkKronicle/'
+    # embed.url = 'https://darkkronicle.com/qr/embed'
     async with aiohttp.ClientSession() as session:
         async with session.get('https://purrbot.site/api/img/sfw/slap/gif') as r:
             embed.set_image(url=(await r.json())['link'])
         async with session.get('https://purrbot.site/api/img/sfw/icon/img') as r:
             embed.set_thumbnail(url=(await r.json())['link'])
     embed.set_footer(text='{0}'.format(user), icon_url=user.display_avatar.url)
-    embed.set_author(name='Mikro Embed Creator 10000')
+    embed.set_author(name=user.display_name)
     return embed
+
+
+class EditDropdown(discord.ui.Select):
+
+    def __init__(self, embed_editor):
+        self.embed_editor: EmbedEditor = embed_editor
+        super().__init__(placeholder='Select field to edit', min_values=0, max_values=1)
+        self.build_options()
+
+    def build_options(self):
+        embed = self.embed_editor.embed
+        for edit in Editables:
+            if edit == Editables.AddField and len(embed.fields) >= 25:
+                continue
+            if edit == Editables.DeleteField and len(embed.fields) == 0:
+                continue
+            self.append_option(
+                discord.SelectOption(
+                    label=edit.name,
+                    description=edit.value,
+                    emoji='<:green_arrow_right:906675760645951548>',
+                    default=False
+                )
+            )
+        for i, field in enumerate(self.embed_editor.embed.fields):
+            self.append_option(
+                discord.SelectOption(
+                    label='#1'.format(i + 1),
+                    description=field.name,
+                    value=str(i),
+                    default=False,
+                )
+            )
+
+    async def callback(self, interaction: Interaction) -> Any:
+        if len(self.values) == 0:
+            await interaction.response.send_message('Updated...')
+            await interaction.delete_original_response()
+            return
+
+        try:
+            edit = Editables[self.values[0]]
+        except:
+            edit = None
+
+        if edit is None:
+            index = int(self.values[0])
+            field = self.embed_editor.embed.fields[index]
+            name = discord.ui.TextInput(label='Name', style=discord.TextStyle.long, placeholder='Title here...', min_length=1, max_length=256, default=field.name)
+            value = discord.ui.TextInput(label='Value', style=discord.TextStyle.long, placeholder='Value here...', min_length=1, max_length=1024, default=field.value)
+            inline = discord.ui.TextInput(label='Inline (y/n)', style=discord.TextStyle.short, placeholder='y/n', min_length=1, max_length=1, default='y' if field.inline else 'n')
+            modal = PromptModal(title='Edit Field'.format(field.name), inputs=[name, value, inline], timeout=120)
+            await interaction.response.send_modal(modal)
+            await modal.wait()
+            if not modal.done:
+                await modal.interaction.response.send("Timed out!")
+                return
+            self.embed_editor.embed.set_field_at(index, name=name.value, value=value.value, inline=field.value.lower() == 'y')
+        elif edit == Editables.AddField:
+            name = discord.ui.TextInput(label='Name', style=discord.TextStyle.long, placeholder='Title here...', min_length=1,max_length=256)
+            value = discord.ui.TextInput(label='Value', style=discord.TextStyle.long, placeholder='Value here...', min_length=1, max_length=1024)
+            inline = discord.ui.TextInput(label='Inline (y/n)', style=discord.TextStyle.short, placeholder='y/n', min_length=1, max_length=1, default='y')
+            modal = PromptModal(title='Add Field'.format(edit.name), inputs=[name, value, inline], timeout=120)
+            await interaction.response.send_modal(modal)
+            await modal.wait()
+            if not modal.done:
+                await modal.interaction.response.send("Timed out!")
+                return
+            await modal.interaction.response.send_message('Added field!')
+            await modal.interaction.delete_original_response()
+            self.embed_editor.embed.add_field(name=name.value, value=value.value, inline=inline.value.lower() == 'y')
+        elif edit == Editables.DeleteField:
+            view = MultiView(None)
+            options = [discord.SelectOption(label='Cancel', description='Cancel deletion', emoji='<:no:907013638068527114>')]
+            options.extend([discord.SelectOption(label='#{0}'.format(i + 1), value=str(i), description=field.name) for i, field in enumerate(self.embed_editor.embed.fields)])
+            select = SelectMenu(min_values=1, max_values=1, options=options)
+            view.add_item(select)
+            message = await self.embed_editor.reply(interaction=interaction, content='Which value to delete?', view=view)
+            view.message = message
+            value = await view.wait()
+            if value:
+                await view.clean_up()
+                return
+            if select.values[0] == 'Cancel':
+                await view.clean_up()
+                return
+            self.embed_editor.embed.remove_field(int(select.values[0]))
+            await view.clean_up()
+        else:
+            limit = 256
+            default = ''
+            set_val = lambda editor, val: None
+            match edit:
+                case Editables.Description:
+                    limit = 4000
+                    default = self.embed_editor.embed.description
+                    set_val = lambda editor, val: editor.embed.set_description(val)
+                case Editables.Title:
+                    limit = 256
+                    default = self.embed_editor.embed.title
+                    set_val = lambda editor, val: editor.embed.set_title(val)
+                case Editables.Author:
+                    limit = 256
+                    default = self.embed_editor.embed.author.name
+                    set_val = lambda editor, val: editor.embed.set_author(name=val)
+                case Editables.Thumbnail:
+                    limit = 100
+                    default = self.embed_editor.embed.thumbnail.url
+                    set_val = lambda editor, val: editor.embed.set_thumbnail(url=val)
+                case Editables.Image:
+                    default = self.embed_editor.embed.image.url
+                    set_val = lambda editor, val: editor.embed.set_image(url=val)
+
+            prompt = discord.ui.TextInput(label='{0}'.format(self.values[0]), style=discord.TextStyle.long, placeholder='Edit value here', min_length=1, max_length=limit, default=default)
+            modal = PromptModal(title='Edit {0}'.format(edit.name), inputs=[prompt], timeout=180)
+            await interaction.response.send_modal(modal)
+            await modal.wait()
+            if not modal.done:
+                await modal.interaction.response.send("Timed out!")
+                return
+            await modal.interaction.response.send_message("Updated...")
+            await modal.interaction.delete_original_response()
+            set_val(self.embed_editor, prompt.value)
+        self._underlying.options.clear()
+        self.build_options()
+        await self.embed_editor.update()
 
 
 class ToggleDropdown(discord.ui.Select):
 
     def __init__(self, embed_editor):
-        self.embed_editor = embed_editor
+        self.embed_editor: EmbedEditor = embed_editor
         super().__init__(min_values=1, placeholder='Toggle certain elements')
         self.build_options()
 
@@ -100,6 +244,16 @@ class ToggleDropdown(discord.ui.Select):
         await interaction.delete_original_response()
 
 
+class DoneButton(discord.ui.Button):
+
+    def __init__(self, embed_editor, *, row: Optional[int] = None):
+        super().__init__(style=ButtonStyle.green, label='Done', row=row)
+        self.embed_editor = embed_editor
+
+    async def callback(self, interaction: Interaction) -> Any:
+        await self.embed_editor.complete(interaction)
+
+
 class EmbedEditor(MultiView):
 
     def __init__(self, bot: Mikro, user: discord.User, message: discord.Message, embed: Embed):
@@ -109,9 +263,19 @@ class EmbedEditor(MultiView):
         self.message: discord.Message = message
         self.embed = embed
         self.add_item(ToggleDropdown(self))
+        self.add_item(EditDropdown(self))
+        self.add_item(DoneButton(self))
 
     async def update(self):
         await self.message.edit(embed=self.embed, view=self)
+
+    async def complete(self, interaction: Interaction):
+        await self.clean_up()
+        buffer = StringIO()
+        buffer.write(self.embed.to_base64())
+        buffer.seek(0)
+        file = discord.File(fp=buffer, filename="embed.txt")
+        await interaction.response.send_message(file=file, embed=self.embed)
 
 
 class EmbedHelper(commands.Cog):
@@ -132,6 +296,19 @@ class EmbedHelper(commands.Cog):
         view = EmbedEditor(self.bot, ctx.author, None, embed)
         message = await ctx.send(embed=embed, view=view)
         view.message = message
+
+    @embed.command(name='send', description='Send base 64 encoded embed')
+    async def send(self, ctx: Context, *, data: str):
+        try:
+            embed = Embed.from_base64(data)
+        except:
+            traceback.print_exc()
+            await ctx.send('Something went wrong!')
+            return
+        embed.set_active_url(False)
+        embed.set_footer(text='{0}'.format(ctx.author), icon_url=ctx.author.display_avatar.url)
+        embed.timestamp = None
+        await ctx.send(embed=embed)
 
 
 async def setup(bot):

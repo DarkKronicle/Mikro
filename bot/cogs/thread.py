@@ -260,7 +260,8 @@ class ThreadCommands(commands.Cog):
         async with db.MaybeAcquire(pool=self.bot.pool) as con:
             row = await con.fetchrow(command, thread_id)
         if row is None:
-            await self.sync_thread(await ThreadData.from_thread(thread_id), update_if_exists=False)
+            thread = await self.bot.fetch_channel(thread_id)
+            await self.sync_thread(await ThreadData.from_thread(thread), update_if_exists=False)
             return await self.get_thread(thread_id)
         return ThreadData.from_query(self.bot, row)
 

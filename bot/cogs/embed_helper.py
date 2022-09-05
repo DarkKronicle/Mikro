@@ -120,6 +120,10 @@ class EditDropdown(discord.ui.Select):
             )
 
     async def callback(self, interaction: Interaction) -> Any:
+        if interaction.user.id != self.embed_editor.user.id:
+            await interaction.response.send_message(content="This isn't your embed!", ephemeral=True)
+            return
+        old_embed = self.embed_editor.embed.copy()
         if len(self.values) == 0:
             await interaction.response.send_message('Updated...')
             await interaction.delete_original_response()
@@ -210,7 +214,14 @@ class EditDropdown(discord.ui.Select):
             set_val(self.embed_editor, prompt.value)
         self._underlying.options.clear()
         self.build_options()
-        await self.embed_editor.update()
+        try:
+            await self.embed_editor.update()
+        except:
+            await interaction.channel.send('Invalid update!')
+            self.embed_editor.embed = old_embed
+            self._underlying.options.clear()
+            self.build_options()
+            await self.embed_editor.update()
 
 
 class ToggleDropdown(discord.ui.Select):
@@ -234,12 +245,24 @@ class ToggleDropdown(discord.ui.Select):
         self.max_values = len(self.options)
 
     async def callback(self, interaction: Interaction) -> Any:
+        if interaction.user.id != self.embed_editor.user.id:
+            await interaction.response.send_message(content="This isn't your embed!", ephemeral=True)
+            return
+        old_embed = self.embed_editor.embed.copy()
         self.embed_editor.embed.set_everything(False)
         for f in (Field[v] for v in self.values):
             f.modify_embed(self.embed_editor.embed, True)
         self._underlying.options.clear()
         self.build_options()
-        await self.embed_editor.update()
+        try:
+            await self.embed_editor.update()
+        except:
+            await interaction.response.send_message('Invalid update!', ephemeral=True)
+            self.embed_editor.embed = old_embed
+            self._underlying.options.clear()
+            self.build_options()
+            await self.embed_editor.update()
+            return
         await interaction.response.send_message('Updated...')
         await interaction.delete_original_response()
 
@@ -251,6 +274,9 @@ class DoneButton(discord.ui.Button):
         self.embed_editor = embed_editor
 
     async def callback(self, interaction: Interaction) -> Any:
+        if interaction.user.id != self.embed_editor.user.id:
+            await interaction.response.send_message(content="This isn't your embed!", ephemeral=True)
+            return
         await self.embed_editor.complete(interaction)
 
 
@@ -275,7 +301,9 @@ class EmbedEditor(MultiView):
         buffer.write(self.embed.to_base64())
         buffer.seek(0)
         file = discord.File(fp=buffer, filename="embed.txt")
-        await interaction.response.send_message(file=file, embed=self.embed)
+        await interaction.response.send_message(
+            file=file, content='Here is the encoded embed. Use `/embed send` to send the embed.', embed=self.embed
+        )
 
 
 class EmbedHelper(commands.Cog):
@@ -308,7 +336,51 @@ class EmbedHelper(commands.Cog):
         embed.set_active_url(False)
         embed.set_footer(text='{0}'.format(ctx.author), icon_url=ctx.author.display_avatar.url)
         embed.timestamp = None
-        await ctx.send(embed=embed)
+        try:
+            await ctx.send(embed=embed)
+        except:
+            await ctx.send('Something went wrong!')
+
+    @embed.command(name='sendfile', description='Send embed from file')
+    async def send_from_file(self, ctx: Context, *, file: discord.Attachment):
+        if not 'text' in file.content_type:
+            await ctx.send("File has to be a text file!")
+            return
+        if not file.url.startswith('https://cdn.discordapp.com/attachments') and not file.url.startswith('https://cdn.discordapp.com/ephemeral-attachments/'):
+            # Only want to download from trusted discord source
+            await ctx.send('URL has to be from discord!')
+            return
+        data = await self.download_text(file.url)
+        if data is None:
+            await ctx.send("That file was invalid!")
+            return
+        try:
+            embed = Embed.from_base64(data)
+            embed.set_active_url(False)
+            embed.set_footer(text='{0}'.format(ctx.author), icon_url=ctx.author.display_avatar.url)
+            embed.timestamp = None
+            await ctx.send(embed=embed)
+        except:
+            await ctx.send("That embed was invalid!")
+
+    @staticmethod
+    async def download_text(url) -> Optional[str]:
+        async with aiohttp.ClientSession() as session:
+            i = 0
+            async with session.get(url) as r:
+                if r.status == 200:
+                    result = bytes()
+                    while True:
+                        chunk = await r.content.read(1024)
+                        if not chunk:
+                            break
+                        result += chunk
+                        i += 1
+                        if i > 64:
+                            # Too big!
+                            return None
+                    return result.decode('utf-8')
+        return None
 
 
 async def setup(bot):

@@ -41,6 +41,12 @@ class Utility(commands.Cog):
         await self.bot.tree.sync()
         await ctx.send('Done!')
 
+    @commands.Cog.listener()
+    async def on_message(self, message: discord.Message):
+        if message.channel.type != discord.ChannelType.news:
+            return
+        await message.publish()
+
 
 async def setup(bot):
     await bot.add_cog(Utility(bot))

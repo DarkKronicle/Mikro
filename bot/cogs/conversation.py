@@ -38,7 +38,7 @@ class Conversation(commands.Cog):
         :param first: First message
         :param second: Last message
         """
-        destination = ctx.channel
+        destination = ctx.channel if not isinstance(ctx.channel, discord.Thread) else ctx.channel.parent
         if isinstance(first, discord.PartialMessage):
             first = await first.fetch()
         if isinstance(second, discord.PartialMessage):
@@ -88,7 +88,7 @@ class Conversation(commands.Cog):
             amount = 100
         if amount < 0:
             amount = 0
-        destination = ctx.channel
+        destination = ctx.channel if not isinstance(ctx.channel, discord.Thread) else ctx.channel.parent
         messages = [message]
 
         if isinstance(message, discord.PartialMessage):
@@ -127,7 +127,7 @@ class Conversation(commands.Cog):
             amount = 100
         if amount < 1:
             amount = 1
-        destination = ctx.channel
+        destination = ctx.channel if not isinstance(ctx.channel, discord.Thread) else ctx.channel.parent
         messages = []
 
         perms: discord.Permissions = destination.permissions_for(ctx.author)
@@ -164,7 +164,7 @@ class Conversation(commands.Cog):
             lookback = 10
         if isinstance(message, discord.PartialMessage):
             message = await message.fetch()
-        destination = ctx.channel
+        destination = ctx.channel if not isinstance(ctx.channel, discord.Thread) else ctx.channel.parent
 
         perms: discord.Permissions = destination.permissions_for(ctx.author)
         if not perms.view_channel or not perms.read_message_history:
@@ -198,7 +198,7 @@ class Conversation(commands.Cog):
         if isinstance(message, discord.PartialMessage):
             message = await message.fetch()
 
-        destination = ctx.channel
+        destination = ctx.channel if not isinstance(ctx.channel, discord.Thread) else ctx.channel.parent
 
         perms: discord.Permissions = destination.permissions_for(ctx.author)
         if not perms.view_channel or not perms.read_message_history:

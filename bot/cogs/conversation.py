@@ -60,7 +60,7 @@ class Conversation(commands.Cog):
 
         await ctx.defer(ephemeral=False)
 
-        webhooker = Webhooker(destination)
+        webhooker = Webhooker(self.bot, destination)
         async for m in first.channel.history(limit=100, oldest_first=False, before=second, after=first):
             messages.append(m)
         messages.append(first)
@@ -96,7 +96,7 @@ class Conversation(commands.Cog):
 
         await ctx.defer(ephemeral=False)
 
-        webhooker = Webhooker(destination)
+        webhooker = Webhooker(self.bot, destination)
         if amount > 0:
             async for m in message.channel.history(limit=amount, oldest_first=False, before=message):
                 messages.append(m)
@@ -129,7 +129,7 @@ class Conversation(commands.Cog):
 
         await ctx.defer(ephemeral=False)
 
-        webhooker = Webhooker(destination)
+        webhooker = Webhooker(self.bot, destination)
         async for message in channel.history(limit=amount, oldest_first=False):
             messages.append(message)
         messages.reverse()
@@ -161,7 +161,7 @@ class Conversation(commands.Cog):
             return
 
         await ctx.defer(ephemeral=False)
-        webhooker = Webhooker(destination)
+        webhooker = Webhooker(self.bot, destination)
         messages = await webhooker.get_reply_chain(message, depth=lookback, loose=False)
         await webhooker.create_thread_with_messages(messages, creator=ctx.author, interaction=ctx.interaction)
 
@@ -192,7 +192,7 @@ class Conversation(commands.Cog):
             return
 
         await ctx.defer(ephemeral=False)
-        webhooker = Webhooker(destination)
+        webhooker = Webhooker(self.bot, destination)
         messages = await webhooker.get_reply_chain(message, lookback=lookback, loose=True, depth=6, build_depth=4)
         await webhooker.create_thread_with_messages(messages, creator=ctx.author, interaction=ctx.interaction)
 

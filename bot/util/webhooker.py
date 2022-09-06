@@ -4,6 +4,8 @@ from functools import wraps
 import re
 from collections import defaultdict
 
+from bot.cogs.thread import ThreadData
+
 
 def build_dict(messages: list[discord.Message], *, loose=False, depth=-1) -> dict[int, list[discord.Message]]:
     pairs = defaultdict(list)
@@ -77,9 +79,10 @@ def get_name(content):
 
 class Webhooker:
 
-    def __init__(self, channel: discord.TextChannel):
+    def __init__(self, bot, channel: discord.TextChannel):
         self.webhook: discord.Webhook = None
         self.channel = channel
+        self.bot = bot
 
     async def setup_webhook(self):
         if self.webhook is not None:
@@ -160,7 +163,11 @@ class Webhooker:
         name = messages[0].content
         if not name:
             name = 'Blank'
-        thread = await m.create_thread(name=get_name(name))
+        async with self.bot.thread_handler.lock:
+            thread = await m.create_thread(name=get_name(name))
+            data = await ThreadData.from_thread(thread)
+            data.owner_id = creator.id
+            await self.bot.thread_handler.sync_thread(data)
         for mes in messages:
             await self.send_message(mes, thread=thread)
 

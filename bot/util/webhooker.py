@@ -4,6 +4,7 @@ from functools import wraps
 import re
 from collections import defaultdict
 
+from typing import Optional
 from bot.cogs.thread import ThreadData
 
 
@@ -77,6 +78,28 @@ def get_name(content):
     return data
 
 
+class BasicMessage:
+
+    def __init__(
+            self,
+            author: discord.User,
+            attachments: Optional[list[discord.Attachment]],
+            embeds: Optional[list[discord.Embed]],
+            content: str,
+    ):
+        self.author = author
+        self.attachments = attachments or []
+        self.embeds = embeds or []
+        self.content = content
+
+    def copy(self):
+        return BasicMessage(self.author, self.attachments.copy(), [e.copy() for e in self.embeds], self.content)
+
+    @classmethod
+    def from_message(cls, message: discord.Message):
+        return cls(message.author, message.attachments, message.embeds, message.content)
+
+
 class Webhooker:
 
     def __init__(self, bot, channel: discord.TextChannel):
@@ -94,7 +117,7 @@ class Webhooker:
                 return
         self.webhook = await self.channel.create_webhook(name='Mikro Sender')
 
-    async def send_message(self, message: discord.Message, *, thread=None, **kwargs) -> typing.Optional[discord.WebhookMessage]:
+    async def send_message(self, message: BasicMessage, *, thread=None, **kwargs) -> typing.Optional[discord.WebhookMessage]:
         files = []
         for attachment in message.attachments:
             files.append(await attachment.to_file())
@@ -168,6 +191,28 @@ class Webhooker:
             data = await ThreadData.from_thread(thread)
             data.owner_id = creator.id
             await self.bot.thread_handler.sync_thread(data)
+        previous_message: BasicMessage = None
+        basic_messages = []
         for mes in messages:
-            await self.send_message(mes, thread=thread)
+            basic = BasicMessage.from_message(mes)
+            if (
+                    previous_message is None
+                    or
+                    basic.author.id != previous_message.author.id
+                    or
+                    not (len(basic.embeds) == 0 and len(previous_message.embeds) == 0)
+                    or
+                    not (len(basic.attachments) == 0 and len(previous_message.attachments) == 0)
+            ):
+                basic_messages.append(basic)
+                previous_message = basic
+                continue
+            new_content = previous_message.content + '\n' + basic.content
+            if len(new_content) > 2000:
+                basic_messages.append(basic)
+                previous_message = basic
+                continue
+            previous_message.content = new_content
 
+        for mes in basic_messages:
+            await self.send_message(mes)

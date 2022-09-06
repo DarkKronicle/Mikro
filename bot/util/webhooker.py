@@ -215,4 +215,4 @@ class Webhooker:
             previous_message.content = new_content
 
         for mes in basic_messages:
-            await self.send_message(mes)
+            await self.send_message(mes, thread=thread)

@@ -141,7 +141,7 @@ class Webhooker:
         return all_replied
 
     @ensure_webhook
-    async def create_thread_with_messages(self, messages: list[discord.Message], *, creator: discord.Member = None):
+    async def create_thread_with_messages(self, messages: list[discord.Message], *, creator: discord.Member = None, interaction: discord.Interaction = None):
         if creator is None:
             creator = messages[0].author
         embed = discord.Embed(
@@ -153,7 +153,10 @@ class Webhooker:
         )
         embed.set_author(icon_url=creator.display_avatar.url, name='Requested by {0}'.format(creator.display_name))
         # Send through channel so we get good-looking message
-        m = await self.channel.send(embed=embed)
+        if interaction is not None:
+            m = await interaction.edit_original_response(embed=embed)
+        else:
+            m = await self.channel.send(embed=embed)
         thread = await m.create_thread(name=get_name(messages[0].content))
         for mes in messages:
             await self.send_message(mes, thread=thread)

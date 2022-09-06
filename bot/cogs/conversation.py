@@ -1,24 +1,31 @@
-import typing
-
 from discord.ext import commands
 import discord
 from discord.ext.commands import Context
 from discord.ext.commands._types import BotT
 
+from bot.cogs.thread import ThreadData
+from bot.mikro import Mikro
 from bot.util.webhooker import Webhooker
 
 
 class Conversation(commands.Cog):
 
     def __init__(self, bot):
-        self.bot: commands.Bot = bot
+        self.bot: Mikro = bot
 
-    def cog_check(self, ctx: Context[BotT]) -> bool:
+    async def cog_check(self, ctx: Context[BotT]) -> bool:
         if ctx.guild.id != 753693459369427044:
             return False
-        if isinstance(ctx.channel, discord.Thread):
+        if not any([r.id == 905237148704329770 for r in ctx.author.roles]):
+            await ctx.send('You have to be T3 to use that command!', ephemeral=True)
             return False
-        return any([r.id == 905237148704329770 for r in ctx.author.roles])
+        if isinstance(ctx.channel, discord.Thread):
+            data: ThreadData = await self.bot.thread_handler.get_thread(ctx.channel.id)
+            if data.owner_id == ctx.author.id:
+                return True
+            await ctx.send("You are not the owner of that thread!", ephemeral=True)
+            return False
+        return False
 
     @commands.hybrid_group(name='move')
     async def move(self, ctx):
@@ -65,7 +72,10 @@ class Conversation(commands.Cog):
             messages.append(m)
         messages.append(first)
         messages.reverse()
-        await webhooker.create_thread_with_messages(messages, creator=ctx.author, interaction=ctx.interaction)
+        if isinstance(ctx.channel, discord.Thread):
+            await webhooker.send_channel_messages(messages, thread=ctx.channel, creator=ctx.author, interaction=ctx.interaction)
+        else:
+            await webhooker.create_thread_with_messages(messages, creator=ctx.author, interaction=ctx.interaction)
 
     @move.command(name='before')
     async def move_before(self, ctx: commands.Context, message: discord.Message, amount: commands.Range[int, 0, 100]):
@@ -101,7 +111,10 @@ class Conversation(commands.Cog):
             async for m in message.channel.history(limit=amount, oldest_first=False, before=message):
                 messages.append(m)
             messages.reverse()
-        await webhooker.create_thread_with_messages(messages, creator=ctx.author, interaction=ctx.interaction)
+        if isinstance(ctx.channel, discord.Thread):
+            await webhooker.send_channel_messages(messages, thread=ctx.channel, creator=ctx.author, interaction=ctx.interaction)
+        else:
+            await webhooker.create_thread_with_messages(messages, creator=ctx.author, interaction=ctx.interaction)
 
     @move.command(name='from')
     async def move_channel(self, ctx: commands.Context, channel: discord.TextChannel, amount: commands.Range[int, 1, 100]):
@@ -133,7 +146,10 @@ class Conversation(commands.Cog):
         async for message in channel.history(limit=amount, oldest_first=False):
             messages.append(message)
         messages.reverse()
-        await webhooker.create_thread_with_messages(messages, creator=ctx.author, interaction=ctx.interaction)
+        if isinstance(ctx.channel, discord.Thread):
+            await webhooker.send_channel_messages(messages, thread=ctx.channel, creator=ctx.author, interaction=ctx.interaction)
+        else:
+            await webhooker.create_thread_with_messages(messages, creator=ctx.author, interaction=ctx.interaction)
 
     @move.command(name='replychain')
     async def move_replies(self, ctx, message: discord.Message, lookback: commands.Range[int, 10, 80] = 80):
@@ -163,7 +179,10 @@ class Conversation(commands.Cog):
         await ctx.defer(ephemeral=False)
         webhooker = Webhooker(self.bot, destination)
         messages = await webhooker.get_reply_chain(message, depth=lookback, loose=False)
-        await webhooker.create_thread_with_messages(messages, creator=ctx.author, interaction=ctx.interaction)
+        if isinstance(ctx.channel, discord.Thread):
+            await webhooker.send_channel_messages(messages, thread=ctx.channel, creator=ctx.author, interaction=ctx.interaction)
+        else:
+            await webhooker.create_thread_with_messages(messages, creator=ctx.author, interaction=ctx.interaction)
 
     @move.command(name='conversation')
     async def move_confo(self, ctx, message: discord.Message, lookback: commands.Range[int, 10, 80] = 80):
@@ -194,7 +213,10 @@ class Conversation(commands.Cog):
         await ctx.defer(ephemeral=False)
         webhooker = Webhooker(self.bot, destination)
         messages = await webhooker.get_reply_chain(message, lookback=lookback, loose=True, depth=6, build_depth=4)
-        await webhooker.create_thread_with_messages(messages, creator=ctx.author, interaction=ctx.interaction)
+        if isinstance(ctx.channel, discord.Thread):
+            await webhooker.send_channel_messages(messages, thread=ctx.channel, creator=ctx.author, interaction=ctx.interaction)
+        else:
+            await webhooker.create_thread_with_messages(messages, creator=ctx.author, interaction=ctx.interaction)
 
 
 async def setup(bot):

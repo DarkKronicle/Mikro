@@ -167,6 +167,28 @@ class Webhooker:
         return all_replied
 
     @ensure_webhook
+    async def send_channel_messages(self, messages: list[discord.Message], *, creator: discord.Member = None, thread: discord.Thread = None, interaction: discord.Interaction = None):
+        if creator is None:
+            creator = messages[0].author
+        embed = discord.Embed(
+            description="{0} Pulled {1} messages starting from **[here]({2})**".format(
+                creator.mention,
+                len(messages),
+                messages[0].jump_url),
+            timestamp=messages[0].created_at,
+        )
+        embed.set_author(icon_url=creator.display_avatar.url, name='Requested by {0}'.format(creator.display_name))
+        if interaction is not None:
+            await interaction.edit_original_response(embed=embed)
+        else:
+            if thread is None:
+                await self.channel.send(embed=embed)
+            else:
+                await thread.send(embed=embed)
+        for mes in self.flatten(messages):
+            await self.send_message(mes, thread=thread)
+
+    @ensure_webhook
     async def create_thread_with_messages(self, messages: list[discord.Message], *, creator: discord.Member = None, interaction: discord.Interaction = None):
         if creator is None:
             creator = messages[0].author
@@ -191,6 +213,12 @@ class Webhooker:
             data = await ThreadData.from_thread(thread)
             data.owner_id = creator.id
             await self.bot.thread_handler.sync_thread(data)
+
+        for mes in self.flatten(messages):
+            await self.send_message(mes, thread=thread)
+
+    @staticmethod
+    def flatten(messages: list[discord.Message]):
         previous_message: BasicMessage = None
         basic_messages = []
         for mes in messages:
@@ -213,6 +241,4 @@ class Webhooker:
                 previous_message = basic
                 continue
             previous_message.content = new_content
-
-        for mes in basic_messages:
-            await self.send_message(mes, thread=thread)
+        return basic_messages

@@ -122,7 +122,7 @@ class ThreadData:
             async for m in thread.history(limit=1, oldest_first=True):
                 message = m
                 break
-        return ThreadData(thread.guild, thread.id, thread.owner_id, thread.name, ThreadCommands.get_content(message), [], '', False, ThreadCommands.is_channel_public(thread.parent), thread.last_message_id)
+        return ThreadData(thread.guild, thread.id, thread.parent.id, thread.owner_id, thread.name, ThreadCommands.get_content(message), [], '', False, ThreadCommands.is_channel_public(thread.parent), thread.last_message_id)
 
 
 class ThreadCommands(commands.Cog):

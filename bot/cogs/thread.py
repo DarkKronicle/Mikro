@@ -133,7 +133,6 @@ class ThreadCommands(commands.Cog):
         self.bot.add_on_load(self.update_threads)
         self.setup = False
         self.lock = asyncio.Lock()
-        self.pin = []
 
     @staticmethod
     def is_channel_public(channel: discord.TextChannel):
@@ -286,13 +285,12 @@ class ThreadCommands(commands.Cog):
 
     @commands.Cog.listener()
     async def on_thread_create(self, thread: discord.Thread):
-        self.pin.append(thread.id)
-        message = await thread.send("""{0} feel free to use `/thread` to customize this thread!""".format(thread.owner.mention).replace('\t', '').replace('  ', ''))
-        await message.pin()
         async with self.lock:
             if self.get_thread.exists(thread.id):
                 return
             await self.sync_thread(await ThreadData.from_thread(thread), update_if_exists=False)
+        message = await thread.send("""{0} feel free to use `/thread` to customize this thread!""".format(thread.owner.mention).replace('\t', '').replace('  ', ''))
+        await message.pin()
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):

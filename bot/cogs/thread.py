@@ -351,7 +351,7 @@ class ThreadCommands(commands.Cog):
 
     @thread_group.command(name='rename', description='Renames the current thread')
     async def rename(self, ctx: Context, *, name: str):
-        if not self.check(ctx):
+        if not await self.check(ctx):
             return
         channel: discord.Thread = ctx.channel
         if '[' in name or ']' in name:

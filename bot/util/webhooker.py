@@ -157,7 +157,10 @@ class Webhooker:
             m = await interaction.edit_original_response(embed=embed)
         else:
             m = await self.channel.send(embed=embed)
-        thread = await m.create_thread(name=get_name(messages[0].content))
+        name = messages[0].content
+        if not name:
+            name = 'Blank'
+        thread = await m.create_thread(name=get_name(name))
         for mes in messages:
             await self.send_message(mes, thread=thread)
 

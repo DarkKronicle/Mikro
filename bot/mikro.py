@@ -28,6 +28,7 @@ startup_extensions = (
     'bot.cogs.stats',
     'bot.cogs.search',
     'bot.cogs.embed_helper',
+    'bot.cogs.thread_discovery',
 )
 
 

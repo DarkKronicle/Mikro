@@ -144,6 +144,8 @@ class ThreadCommands(commands.Cog):
         return perms.view_channel and perms.read_message_history
 
     async def update_threads(self, *args) -> None:
+        if self.bot.debug:
+            return
         time = args[0] if len(args) > 0 else None
         if time is not None and (not self.setup or time.minute != 0 or time.hour % 6 != 0):
             return
@@ -276,6 +278,12 @@ class ThreadCommands(commands.Cog):
             await self.sync_thread(await ThreadData.from_thread(thread), update_if_exists=False)
             return await self.get_thread(thread_id)
         return ThreadData.from_query(self.bot, row)
+
+    async def exists(self, thread_id):
+        command = 'SELECT thread_id FROM threads WHERE thread_id = $1;'
+        async with db.MaybeAcquire(pool=self.bot.pool) as con:
+            row = await con.fetchrow(command, thread_id)
+        return row is not None
 
     async def sync_thread(self, thread: ThreadData, update_if_exists=True):
         async with db.MaybeAcquire(pool=self.bot.pool) as con:

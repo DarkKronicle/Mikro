@@ -186,6 +186,7 @@ class Stats(commands.Cog):
             type = MessageType.simple
         sm = Message(message.guild.id, message.channel.id, message.author.id, message.id, time_util.get_utc(), type)
         await self.bot.get_cog('Tree').on_message(sm)
+        await self.bot.get_cog('ThreadDiscovery').on_message(message)
         self.cache.append(sm)
         await self.update_interval(sm)
 
@@ -203,7 +204,11 @@ class Stats(commands.Cog):
         return data
 
     async def get_messages_in_cooldown(self, guild_id, *, channel_id=None, user_id=None, interval: CooldownInterval) -> int:
-        command = "DELETE FROM message_cooldown WHERE now() at time 'utc' >= time + period;"
+        if channel_id is None:
+            channel_id = 0
+        if user_id is None:
+            user_id = 0
+        command = "DELETE FROM message_cooldown WHERE now() at time zone 'utc' >= time + period;"
         fetch = "SELECT amount FROM message_cooldown WHERE guild_id = {0} and channel_id = {1} and user_id = {2} " \
                 "and period = INTERVAL '{3}';".format(guild_id, channel_id, user_id, interval.value)
         async with db.MaybeAcquire(pool=self.bot.pool) as con:

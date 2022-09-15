@@ -42,6 +42,7 @@ class ThreadDiscovery(commands.Cog):
         if not self.bot.thread_handler.is_channel_public(thread.parent):
             # Private stuff
             return
+        data = await self.bot.thread_handler.get_thread(thread.id)
         s: stats.Stats = self.bot.get_cog('Stats')
         amount = await s.get_messages_in_cooldown(message.guild.id, channel_id=message.channel.id, interval=stats.CooldownInterval.hours_3)
         if amount > 0:
@@ -49,7 +50,7 @@ class ThreadDiscovery(commands.Cog):
             return
         embed = Embed()
         embed.set_author(name='New Activity', url=thread.jump_url, icon_url=message.author.display_avatar.url)
-        embed.description = '{0}\n{1} created by {2}'.format(thread.mention, thread.name, thread.owner.mention if thread.owner is not None else '`Unknown`')
+        embed.description = '{0}\n`{1}` created by {2}'.format(thread.mention, thread.name, data.owner.mention if data.owner is not None else '`Unknown`')
         embed.timestamp = message.created_at
         embed.color = discord.Colour(0x9d0df0)
         await self.discovery_channel.send(embed=embed)

@@ -117,7 +117,10 @@ class ThreadData:
     @classmethod
     async def from_thread(cls, thread: discord.Thread):
         try:
-            message = await thread.parent.fetch_message(thread.id)
+            if isinstance(thread.parent, discord.ForumChannel):
+                message = await thread.fetch_message(thread.id)
+            else:
+                message = await thread.parent.fetch_message(thread.id)
         except discord.NotFound:
             async for m in thread.history(limit=1, oldest_first=True):
                 message = m
@@ -141,10 +144,6 @@ class ThreadCommands(commands.Cog):
         return perms.view_channel and perms.read_message_history
 
     async def update_threads(self, *args) -> None:
-
-        if self.bot.debug:
-            return
-
         time = args[0] if len(args) > 0 else None
         if time is not None and (not self.setup or time.minute != 0 or time.hour % 6 != 0):
             return
@@ -152,7 +151,15 @@ class ThreadCommands(commands.Cog):
         command = 'INSERT INTO threads(guild_id, thread_id, channel_id, owner_id, title, public) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (thread_id) DO UPDATE SET title = EXCLUDED.title, channel_id = EXCLUDED.channel_id;'
         values = []
         guild = self.bot.get_main_guild()
+
         guild_threads = []
+        # We do a bit of monkey business
+        discord.ForumChannel.archived_threads = discord.TextChannel.archived_threads
+
+        for forum in guild.forums:
+            guild_threads.extend(forum.threads)
+            async for thread in forum.archived_threads(limit=None, private=False):
+                guild_threads.append(thread)
         for channel in guild.text_channels:
             logging.info('Gathering threads from {0}'.format(channel.name))
             guild_threads.extend(channel.threads)
@@ -161,6 +168,7 @@ class ThreadCommands(commands.Cog):
             if channel.type != discord.ChannelType.news:
                 async for thread in channel.archived_threads(limit=None, private=True):
                     guild_threads.append(thread)
+
         for thread in guild_threads:
             values.append((thread.guild.id, thread.id, thread.parent_id, thread.owner_id, thread.name, self.is_channel_public(thread.parent)))
         logging.info('Found {0} threads'.format(len(values)))
@@ -237,12 +245,17 @@ class ThreadCommands(commands.Cog):
             thread = dict(thread)
             guild = self.bot.get_guild(thread['guild_id'])
             channel: discord.Thread = await guild.fetch_channel(thread['thread_id'])
-            try:
-                message = await channel.parent.fetch_message(channel.id)
-            except discord.NotFound:
+            if isinstance(channel.parent, discord.ForumChannel):
                 async for m in channel.history(limit=1, oldest_first=True):
                     message = m
                     break
+            else:
+                try:
+                    message = await channel.parent.fetch_message(channel.id)
+                except discord.NotFound:
+                    async for m in channel.history(limit=1, oldest_first=True):
+                        message = m
+                        break
             descriptions.append((thread['thread_id'], self.get_content(message, owners, thread['thread_id'])))
         if descriptions:
             async with db.MaybeAcquire(pool=self.bot.pool) as con:
@@ -290,7 +303,12 @@ class ThreadCommands(commands.Cog):
                 return
             await self.sync_thread(await ThreadData.from_thread(thread), update_if_exists=False)
         message = await thread.send("""{0} feel free to use `/thread` to customize this thread!""".format(thread.owner.mention).replace('\t', '').replace('  ', ''))
-        await message.pin()
+        if isinstance(thread.parent, discord.ForumChannel):
+            async for message in thread.history(limit=1, oldest_first=True):
+                await message.pin()
+                break
+        else:
+            await message.pin()
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):

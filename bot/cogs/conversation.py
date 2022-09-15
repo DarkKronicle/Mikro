@@ -23,7 +23,7 @@ class Conversation(commands.Cog):
             data: ThreadData = await self.bot.thread_handler.get_thread(ctx.channel.id)
             if data.owner_id == ctx.author.id:
                 return True
-            await ctx.send("You are not the owner of that thread!", ephemeral=True)
+            await ctx.send("You are not the owner of this thread!", ephemeral=True)
             return False
         return False
 

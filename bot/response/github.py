@@ -32,6 +32,9 @@ async def github(content: parse.ParseResult):
             if parts[3] == 'commit':
                 embed = await client.build_commit_embed(parts[4])
                 return {'embed': embed}
+            if parts[3] == 'tree' and len(parts) == 4:
+                embed = await client.build_embed()
+                return {'embed': embed}
         else:
             embed = await client.build_embed()
             return {'embed': embed}

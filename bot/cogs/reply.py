@@ -1,8 +1,6 @@
 import discord
 from discord.ext import commands
-from discord import app_commands
 import re
-import typing
 
 
 MESSAGE_REGEX = r'http(?:s?):\/\/(?:(?:canary\.)|(?:ptb\.))?discord\.com\/channels\/(\d+)\/(\d+)\/(\d+)(?:\/?)'

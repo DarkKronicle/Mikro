@@ -1,3 +1,4 @@
+import logging
 import traceback
 
 from aiohttp import web
@@ -5,6 +6,7 @@ from gidgethub import routing, sansio, aiohttp
 import asyncio
 import bot as bot_global
 from bot.github import github_handler
+from bot.util import database as db
 
 router = routing.Router()
 
@@ -28,7 +30,6 @@ class Register(object):
         for method_name in object_methods:
             func = getattr(self, method_name)
             register = getattr(func, 'register', None)
-            print(register)
             if not register:
                 continue
 
@@ -133,7 +134,12 @@ class WebhookReceiver(Register):
             if event.event == "ping":
                 return web.Response(status=200)
             installation = event.data['installation']['id']
-            async with github_handler.GithubSession(installation_id=installation) as gh:
+            logging.info(f"Installation ID: {installation}")
+            if event.data['repository']:
+                async with db.MaybeAcquire(pool=self.bot.pool) as con:
+                    command = 'UPDATE repositories SET installation_id = $1 WHERE id = $2;'
+                    await con.execute(command, installation, event.data['repository']['id'])
+            async with github_handler.GithubSession(github=self.bot.get_cog('Github'), installation_id=installation) as gh:
                 # Give GitHub some time to reach internal consistency.
                 await asyncio.sleep(1)
                 await router.dispatch(event, gh)

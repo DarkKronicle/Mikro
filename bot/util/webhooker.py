@@ -1,11 +1,13 @@
+from __future__ import annotations
 import discord
 import typing
 from functools import wraps
 import re
 from collections import defaultdict
 
-from typing import Optional
-from bot.cogs.thread import ThreadData
+from typing import Optional, TYPE_CHECKING
+if TYPE_CHECKING:
+    from bot.cogs.thread import ThreadData
 
 
 def build_dict(messages: list[discord.Message], *, loose=False, depth=-1) -> dict[int, list[discord.Message]]:
@@ -116,6 +118,21 @@ class Webhooker:
                 self.webhook = webhook
                 return
         self.webhook = await self.channel.create_webhook(name='Mikro Sender')
+
+    @ensure_webhook
+    async def edit(self, message_id, thread=discord.utils.MISSING, **kwargs):
+        # Can't modify what user looks like
+        kwargs.pop('avatar_url', None)
+        kwargs.pop('username', None)
+        return await self.webhook.edit_message(message_id, thread=thread, **kwargs)
+
+    @ensure_webhook
+    async def send(self, thread=discord.utils.MISSING, **kwargs):
+        return await self.webhook.send(thread=thread, **kwargs)
+
+    @ensure_webhook
+    async def create_thread(self, name, **kwargs):
+        return await self.webhook.send(thread_name=name, **kwargs)
 
     async def send_message(self, message: BasicMessage, *, thread=None, **kwargs) -> typing.Optional[discord.WebhookMessage]:
         files = []

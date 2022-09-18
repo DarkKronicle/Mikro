@@ -95,6 +95,7 @@ class WebhookReceiver:
         pass
 
     async def on_request(self, request: web.Request):
+        print('WOOOO')
         try:
             body = await request.read()
             secret = bot_global.config['gh_secret']

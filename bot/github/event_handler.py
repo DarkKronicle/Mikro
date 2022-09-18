@@ -9,88 +9,118 @@ from bot.github import github_handler
 router = routing.Router()
 
 
-class WebhookReceiver:
+def register(event_type, **data_detail):
+
+    def decorator(func):
+
+        func.register = (event_type, data_detail)
+
+        return func
+
+    return decorator
+
+
+class Register(object):
+
+    def __init__(self):
+        super().__init__()
+        object_methods = [method_name for method_name in dir(self) if callable(getattr(self, method_name))]
+        for method_name in object_methods:
+            func = getattr(self, method_name)
+            register = getattr(func, 'register', None)
+            print(register)
+            if not register:
+                continue
+
+            async def inner_method(*args, **kwargs):
+                await func(self, *args, **kwargs)
+
+            router.add(inner_method, event_type=register[0], **register[1])
+
+
+class WebhookReceiver(Register):
 
     def __init__(self, bot):
         self.bot = bot
+        super().__init__()
 
     @property
     def github(self) -> github_handler.Github:
         return self.bot.get_cog('Github')
 
-    @router.register('issue_comment', action='created')
+    @register('issue_comment', action='created')
     async def created_issue(self, event: sansio.Event, gh: aiohttp.GitHubAPI, *arg, **kwargs):
         pass
 
-    @router.register('issue_comment', action='edited')
+    @register('issue_comment', action='edited')
     async def edited_issue(self, event: sansio.Event, gh: aiohttp.GitHubAPI, *arg, **kwargs):
         pass
 
-    @router.register('issue_comment', action='deleted')
+    @register('issue_comment', action='deleted')
     async def deleted_issue(self, event: sansio.Event, gh: aiohttp.GitHubAPI, *arg, **kwargs):
         pass
 
-    @router.register('issues', action='reopened')
+    @register('issues', action='reopened')
     async def reopened_issue(self, event: sansio.Event, gh: aiohttp.GitHubAPI, *arg, **kwargs):
         pass
 
-    @router.register('issues', action='labeled')
+    @register('issues', action='labeled')
     async def labeled_issue(self, event: sansio.Event, gh: aiohttp.GitHubAPI, *arg, **kwargs):
         pass
 
-    @router.register('issues', action='unlabled')
+    @register('issues', action='unlabled')
     async def unlabeled_issue(self, event: sansio.Event, gh: aiohttp.GitHubAPI, *arg, **kwargs):
         pass
 
-    @router.register('issues', action='locked')
+    @register('issues', action='locked')
     async def locked_issue(self, event: sansio.Event, gh: aiohttp.GitHubAPI, *arg, **kwargs):
         pass
 
-    @router.register('issues', action='unlocked')
+    @register('issues', action='unlocked')
     async def unlocked_issue(self, event: sansio.Event, gh: aiohttp.GitHubAPI, *arg, **kwargs):
         pass
 
-    @router.register('issues', action='pinned')
+    @register('issues', action='pinned')
     async def pinned_issue(self, event: sansio.Event, gh: aiohttp.GitHubAPI, *arg, **kwargs):
         pass
 
-    @router.register('issues', action='unpinned')
+    @register('issues', action='unpinned')
     async def unpinned_issue(self, event: sansio.Event, gh: aiohttp.GitHubAPI, *arg, **kwargs):
         pass
 
-    @router.register('issues', action='opened')
+    @register('issues', action='opened')
     async def opened_issue(self, event: sansio.Event, gh: aiohttp.GitHubAPI, *arg, **kwargs):
         pass
 
-    @router.register('issues', action='closed')
+    @register('issues', action='closed')
     async def closed_issue(self, event: sansio.Event, gh: aiohttp.GitHubAPI, *arg, **kwargs):
         pass
 
-    @router.register('pull_request', action='closed')
+    @register('pull_request', action='closed')
     async def closed_pr(self, event: sansio.Event, gh: aiohttp.GitHubAPI, *arg, **kwargs):
         pass
 
-    @router.register("pull_request", action="opened")
+    @register("pull_request", action="opened")
     async def opened_pr(self, event, gh, *arg, **kwargs):
         pass
 
-    @router.register("pull_request", action="labeled")
+    @register("pull_request", action="labeled")
     async def labeled_pr(self, event, gh, *arg, **kwargs):
         pass
 
-    @router.register("pull_request", action="unlabeled")
+    @register("pull_request", action="unlabeled")
     async def unlabeled_pr(self, event, gh, *arg, **kwargs):
         pass
 
-    @router.register("pull_request", action="locked")
+    @register("pull_request", action="locked")
     async def locked_pr(self, event, gh, *arg, **kwargs):
         pass
 
-    @router.register("pull_request", action="unlocked")
+    @register("pull_request", action="unlocked")
     async def unlocked_pr(self, event, gh, *arg, **kwargs):
         pass
 
-    @router.register("pull_request", action="edited")
+    @register("pull_request", action="edited")
     async def edited_pr(self, event, gh, *arg, **kwargs):
         pass
 

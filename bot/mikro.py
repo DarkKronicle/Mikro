@@ -1,3 +1,4 @@
+import asyncio
 import math
 import typing
 
@@ -9,6 +10,7 @@ import discord
 from discord.ext import commands, tasks
 from datetime import datetime
 
+from bot.github import event_handler
 from bot.util import time_util
 
 from bot import response
@@ -29,6 +31,7 @@ startup_extensions = (
     'bot.cogs.search',
     'bot.cogs.embed_helper',
     'bot.cogs.thread_discovery',
+    'bot.github.github_handler',
 )
 
 
@@ -125,6 +128,7 @@ class Mikro(commands.Bot):
 
     async def run_once_when_ready(self):
         await self.wait_until_ready()
+        asyncio.get_event_loop().create_task(event_handler.run_webhook(self))
         self.setup_loop.start()
         print('Ready!')
         for function in self.on_load:

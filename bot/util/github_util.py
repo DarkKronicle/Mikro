@@ -175,6 +175,8 @@ class GithubClient:
             ),
         )
 
+        self.embed.set_footer(text='ID: {0}'.format(data['id']))
+
         license = data.get('license')
         if license:
             name = license.get('name')

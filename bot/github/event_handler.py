@@ -116,7 +116,7 @@ class WebhookReceiver:
 async def run_webhook(bot):
     receiver = WebhookReceiver(bot)
     app = web.Application()
-    app.router.add_post(r"/", receiver.on_request)
+    app.router.add_post(r"/webhook", receiver.on_request)
     port = bot_global.config["gh_port"]
     if port is not None:
         port = int(port)

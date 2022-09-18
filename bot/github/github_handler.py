@@ -244,7 +244,7 @@ class Github(commands.Cog):
     async def add_repo(self, ctx: Context, repo: str, channel: discord.ForumChannel):
         if repo.count('/') != 1:
             return await ctx.send('Format repo in `owner/repo`')
-        async with GithubSession(installation_id=None) as gh:
+        async with GithubSession(installation_id=None, github=self) as gh:
             try:
                 repo = await gh.gh.getitem("/repos/" + repo)
             except:

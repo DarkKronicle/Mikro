@@ -1,12 +1,16 @@
+from __future__ import annotations
+
 import asyncio
 import logging
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 import discord
 from discord.ext import commands
 
 from bot.core.context import Context
-from bot.mikro import Mikro
+
+if TYPE_CHECKING:
+    from bot.mikro import Mikro
 from bot.util import cache
 import re
 from bot.util import database as db
@@ -310,13 +314,14 @@ class ThreadCommands(commands.Cog):
             if self.get_thread.exists(thread.id):
                 return
             await self.sync_thread(await ThreadData.from_thread(thread), update_if_exists=False)
-        message = await thread.send("""{0} feel free to use `/thread` to customize this thread!""".format(thread.owner.mention).replace('\t', '').replace('  ', ''))
-        if isinstance(thread.parent, discord.ForumChannel):
-            async for message in thread.history(limit=1, oldest_first=True):
+        if thread.owner is not None:
+            message = await thread.send("""{0} feel free to use `/thread` to customize this thread!""".format(thread.owner.mention).replace('\t', '').replace('  ', ''))
+            if isinstance(thread.parent, discord.ForumChannel):
+                async for message in thread.history(limit=1, oldest_first=True):
+                    await message.pin()
+                    break
+            else:
                 await message.pin()
-                break
-        else:
-            await message.pin()
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):

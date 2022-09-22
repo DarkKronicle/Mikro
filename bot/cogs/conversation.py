@@ -21,7 +21,7 @@ class Conversation(commands.Cog):
             await ctx.send('You have to be T3 to use that command!', ephemeral=True)
             return False
         if isinstance(ctx.channel, discord.Thread):
-            data: ThreadData = await self.bot.thread_handler.get_thread(ctx.channel.id)
+            data = await self.bot.thread_handler.get_thread(ctx.channel.id)
             if data.owner_id == ctx.author.id:
                 return True
             await ctx.send("You are not the owner of this thread!", ephemeral=True)

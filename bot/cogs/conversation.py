@@ -26,8 +26,7 @@ class Conversation(commands.Cog):
                 return True
             await ctx.send("You are not the owner of this thread!", ephemeral=True)
             return False
-        await ctx.send("Unknown...")
-        return False
+        return True
 
     @commands.hybrid_group(name='move')
     async def move(self, ctx):

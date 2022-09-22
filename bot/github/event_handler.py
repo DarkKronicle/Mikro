@@ -50,79 +50,108 @@ class WebhookReceiver(Register):
         return self.bot.get_cog('Github')
 
     @register('issue_comment', action='created')
-    async def created_issue(self, event: sansio.Event, gh: aiohttp.GitHubAPI, *arg, **kwargs):
-        pass
+    async def created_issue(self, event: sansio.Event, gh: github_handler.GithubSession, *arg, **kwargs):
+        async with self.github.get_lock(event.data['installation']['id']):
+            async with db.MaybeAcquire(pool=self.bot.pool) as con:
+                comment_data = await con.fetchrow("SELECT * FROM issue_comments WHERE id = $1;")
+                if comment_data:
+                    # It already exists!
+                    return
+                issue_data = await con.fetchrow("SELECT * FROM issues WHERE id = $1;", event.data['repository']['id'])
+                if not issue_data:
+                    return
+            await gh.insert_issue_comment_github(event.data, issue_data)
 
     @register('issue_comment', action='edited')
-    async def edited_issue(self, event: sansio.Event, gh: aiohttp.GitHubAPI, *arg, **kwargs):
-        pass
+    async def edited_issue(self, event: sansio.Event, gh: github_handler.GithubSession, *arg, **kwargs):
+        async with self.github.get_lock(event.data['installation']['id']):
+            async with db.MaybeAcquire(pool=self.bot.pool) as con:
+                comment_data = await con.fetchrow("SELECT * FROM issue_comments WHERE id = $1;", event.data['comment']['id'])
+                if comment_data is None or not comment_data['github_message']:
+                    # Not my content
+                    return
+                issue_data = await con.fetchrow("SELECT * FROM issues WHERE id = $1;", event.data['repository']['id'])
+                if not issue_data:
+                    return
+            await gh.update_issue_comment_github(event.data, issue_data)
 
     @register('issue_comment', action='deleted')
-    async def deleted_issue(self, event: sansio.Event, gh: aiohttp.GitHubAPI, *arg, **kwargs):
-        pass
+    async def deleted_issue(self, event: sansio.Event, gh: github_handler.GithubSession, *arg, **kwargs):
+        async with self.github.get_lock(event.data['installation']['id']):
+            async with db.MaybeAcquire(pool=self.bot.pool) as con:
+                comment_data = await con.fetchrow("SELECT * FROM issue_comments WHERE id = $1;", event.data['comment']['id'])
+                if comment_data is None:
+                    # Not my content
+                    return
+                issue_data = await con.fetchrow("SELECT * FROM issues WHERE id = $1;", event.data['repository']['id'])
+                if not issue_data:
+                    return
+            await gh.delete_issue_comment_github(event.data, comment_data, issue_data)
 
     @register('issues', action='reopened')
-    async def reopened_issue(self, event: sansio.Event, gh: aiohttp.GitHubAPI, *arg, **kwargs):
-        pass
+    async def reopened_issue(self, event: sansio.Event, gh: github_handler.GithubSession, *arg, **kwargs):
+        async with self.github.get_lock(event.data['installation']['id']):
+            async with db.MaybeAcquire(pool=self.bot.pool) as con:
+                issue_data = await con.fetchrow("SELECT * FROM issues WHERE id = $1;", event.data['issue']['id'])
 
     @register('issues', action='labeled')
-    async def labeled_issue(self, event: sansio.Event, gh: aiohttp.GitHubAPI, *arg, **kwargs):
+    async def labeled_issue(self, event: sansio.Event, gh: github_handler.GithubSession, *arg, **kwargs):
         pass
 
     @register('issues', action='unlabled')
-    async def unlabeled_issue(self, event: sansio.Event, gh: aiohttp.GitHubAPI, *arg, **kwargs):
+    async def unlabeled_issue(self, event: sansio.Event, gh: github_handler.GithubSession, *arg, **kwargs):
         pass
 
     @register('issues', action='locked')
-    async def locked_issue(self, event: sansio.Event, gh: aiohttp.GitHubAPI, *arg, **kwargs):
+    async def locked_issue(self, event: sansio.Event, gh: github_handler.GithubSession, *arg, **kwargs):
         pass
 
     @register('issues', action='unlocked')
-    async def unlocked_issue(self, event: sansio.Event, gh: aiohttp.GitHubAPI, *arg, **kwargs):
+    async def unlocked_issue(self, event: sansio.Event, gh: github_handler.GithubSession, *arg, **kwargs):
         pass
 
     @register('issues', action='pinned')
-    async def pinned_issue(self, event: sansio.Event, gh: aiohttp.GitHubAPI, *arg, **kwargs):
+    async def pinned_issue(self, event: sansio.Event, gh: github_handler.GithubSession, *arg, **kwargs):
         pass
 
     @register('issues', action='unpinned')
-    async def unpinned_issue(self, event: sansio.Event, gh: aiohttp.GitHubAPI, *arg, **kwargs):
+    async def unpinned_issue(self, event: sansio.Event, gh: github_handler.GithubSession, *arg, **kwargs):
         pass
 
     @register('issues', action='opened')
-    async def opened_issue(self, event: sansio.Event, gh: aiohttp.GitHubAPI, *arg, **kwargs):
+    async def opened_issue(self, event: sansio.Event, gh: github_handler.GithubSession, *arg, **kwargs):
         pass
 
     @register('issues', action='closed')
-    async def closed_issue(self, event: sansio.Event, gh: aiohttp.GitHubAPI, *arg, **kwargs):
+    async def closed_issue(self, event: sansio.Event, gh: github_handler.GithubSession, *arg, **kwargs):
         pass
 
     @register('pull_request', action='closed')
-    async def closed_pr(self, event: sansio.Event, gh: aiohttp.GitHubAPI, *arg, **kwargs):
+    async def closed_pr(self, event: sansio.Event, gh: github_handler.GithubSession, *arg, **kwargs):
         pass
 
     @register("pull_request", action="opened")
-    async def opened_pr(self, event, gh, *arg, **kwargs):
+    async def opened_pr(self, event: sansio.Event, gh: github_handler.GithubSession, *arg, **kwargs):
         pass
 
     @register("pull_request", action="labeled")
-    async def labeled_pr(self, event, gh, *arg, **kwargs):
+    async def labeled_pr(self, event: sansio.Event, gh: github_handler.GithubSession, *arg, **kwargs):
         pass
 
     @register("pull_request", action="unlabeled")
-    async def unlabeled_pr(self, event, gh, *arg, **kwargs):
+    async def unlabeled_pr(self, event: sansio.Event, gh: github_handler.GithubSession, *arg, **kwargs):
         pass
 
     @register("pull_request", action="locked")
-    async def locked_pr(self, event, gh, *arg, **kwargs):
+    async def locked_pr(self, event: sansio.Event, gh: github_handler.GithubSession, *arg, **kwargs):
         pass
 
     @register("pull_request", action="unlocked")
-    async def unlocked_pr(self, event, gh, *arg, **kwargs):
+    async def unlocked_pr(self, event: sansio.Event, gh: github_handler.GithubSession, *arg, **kwargs):
         pass
 
     @register("pull_request", action="edited")
-    async def edited_pr(self, event, gh, *arg, **kwargs):
+    async def edited_pr(self, event: sansio.Event, gh: github_handler.GithubSession, *arg, **kwargs):
         pass
 
     async def on_request(self, request: web.Request):

@@ -137,16 +137,53 @@ class GithubSession:
             response = await self.gh.post(f'/repos/{await self.get_repo()}/issues/{issue_data["number"]}/comments', data={'body': content}, oauth_token=await self.get_token())
             await self.github.insert_issue_content_from_discord(response, issue_data, content, message)
 
-    async def update_issue_comment_github(self, data: dict):
-        async with self.github.get_lock(self.installation_id):
-            kwargs = self.github.data_to_kwargs(data)
-            issue_data = await self.github.get_issue_comment(issue_comment_id=data['id'])
-            if not issue_data:
-                logging.warning(f'Issue comment {data["id"]} not found.')
-                return
-            webhook: Webhooker = self.github.get_webhooker(await self.github.get_channel(await self.get_repo()))
-            await webhook.edit(issue_data['message_id'], **kwargs)
-            await self.github.update_issue_content_from_github(kwargs['content'], data['id'])
+    async def insert_issue_comment_github(self, comment_data, issue_data):
+        kwargs = self.github.data_to_kwargs(comment_data['body'])
+        thread_data = await self.github.bot.thread_handler.get_thread(issue_data['thread_id'])
+        thread = thread_data.thread
+        if not thread:
+            thread = await self.github.bot.get_guild(thread.guild_id).fetch_channel(thread.thread_id)
+        webhooker = self.github.get_webhooker(thread.parent)
+        message = await webhooker.send(thread=thread, wait=True, **kwargs)
+        await self.github.insert_issue_content_from_github(comment_data, issue_data, message)
+
+    async def update_issue_comment_github(self, data: dict, issue_data):
+        kwargs = self.github.data_to_kwargs(data)
+        webhook: Webhooker = self.github.get_webhooker(await self.github.get_channel(await self.get_repo()))
+        await webhook.edit(issue_data['message_id'], **kwargs)
+        await self.github.update_issue_content_from_github(kwargs['content'], data['id'])
+
+    async def delete_issue_comment_github(self, update_data, comment_data, issue_data):
+        guild = self.github.bot.get_guild(comment_data['guild_id'])
+        thread = guild.get_channel(comment_data['channel_id'])
+        if not thread:
+            thread = await guild.fetch_channel(comment_data['channel_id'])
+        partial_message = thread.get_partial_message(comment_data['message_id'])
+        message = next((m for m in self.github.bot.cached_messages if m.id == partial_message.id), None)
+        if not message:
+            message = await partial_message.fetch()
+        async with db.MaybeAcquire(pool=self.github.bot.pool) as con:
+            await con.execute("DELETE FROM issue_comments WHERE id = $1;", comment_data['id'])
+        try:
+            await message.delete()
+        except:
+            pass
+
+    async def delete_issue_comment_discord(self, comment_data, issue_data, repo_data):
+        async with db.MaybeAcquire(pool=self.github.bot.pool) as con:
+            await con.execute("DELETE FROM issue_comments WHERE id = $1;", comment_data['id'])
+        guild = self.github.bot.get_guild(comment_data['guild_id'])
+        thread = guild.get_channel(comment_data['channel_id'])
+        if not thread:
+            thread = await guild.fetch_channel(comment_data['channel_id'])
+        partial_message = thread.get_partial_message(comment_data['message_id'])
+        message = next((m for m in self.github.bot.cached_messages if m.id == partial_message.id), None)
+        if not message:
+            message = await partial_message.fetch()
+        try:
+            await message.delete()
+        except:
+            pass
 
 
 class Github(commands.Cog):
@@ -242,6 +279,30 @@ class Github(commands.Cog):
                     # Reset the name since it doesn't follow the type
                     new_title = '[{0}] {1}'.format(repo_data['name'], issue_data['title'])
                     await thread.edit(name=new_title)
+            thread_tags = set([tag.name for tag in thread.applied_tags])
+            db_tags = set(issue_data['labels'])
+            if thread_tags != db_tags:
+                async with self.get_lock(repo_data['installation_id']):
+                    command = "UPDATE issues SET labels = $1;"
+                    async with db.MaybeAcquire(pool=self.bot.pool) as con:
+                        await con.execute(command, list(thread_tags))
+                    async with GithubSession(github=self, installation_id=repo_data['installation_id']) as gh:
+                        await gh.gh.post(f"/repos/{repo_data['full_name']}/issues/{issue_data['number']}", data={'labels': list(thread_tags)})
+
+    @commands.Cog.listener()
+    async def on_raw_message_delete(self, payload: discord.RawMessageDeleteEvent):
+        async with db.MaybeAcquire(pool=self.bot.pool) as con:
+            issue_com = "SELECT * FROM issue_comments WHERE message_id = $1;"
+            comment_data = await con.fetchrow(issue_com, payload.message_id)
+            if comment_data is None:
+                return
+            issue_data = await con.fetchrow("SELECT * FROM issues WHERE id = $1;", comment_data['issue']);
+            repo_data = await con.fetchrow("SELECT * FROM repositories WHERE id = $1;", issue_data['repository'])
+
+        async with self.get_lock(repo_data['installation_id']):
+            async with GithubSession(self, repo_data['installation_id']) as gh:
+                await gh.delete_issue_comment_discord(comment_data, issue_data, repo_data)
+
 
     @commands.Cog.listener()
     async def on_raw_message_edit(self, payload: discord.RawMessageUpdateEvent):
@@ -317,6 +378,11 @@ class Github(commands.Cog):
         async with db.MaybeAcquire(pool=self.bot.pool) as con:
             await con.execute(command, body, message.id)
 
+    async def insert_issue_content_from_github(self, comment, issue_data, message: discord.Message):
+        command = "INSERT INTO issue_comments(issue, id, github_message, guild_id, channel_id, message_id, content) VALUES ($1, $2, $3, $4, $5, $6, $7);"
+        async with db.MaybeAcquire(pool=self.bot.pool) as con:
+            await con.execute(command, issue_data['id'], comment['id'], True, message.guild.id, message.channel.id, message.id, message.content)
+
     async def update_issue_content_from_github(self, body, comment_id):
         command = "UPDATE issue_comments SET content = $1 WHERE id = $2;"
         async with db.MaybeAcquire(pool=self.bot.pool) as con:
@@ -347,6 +413,14 @@ class Github(commands.Cog):
             for comment in issue_comments:
                 await self.create_issue_comment(webhook, thread, repo_data, issue_data, comment)
 
+    async def sync_labels(self, repo_fullname, channel: discord.ForumChannel):
+        async with GithubSession(github=self, installation_id=None) as gh:
+            tag_names = [tag.name for tag in channel.available_tags]
+            async for label in gh.gh.getiter(f"/repos/{repo_fullname}/labels"):
+                if label['name'] in tag_names:
+                    continue
+                await channel.create_tag(name=label['name'], moderated=True)
+
     async def create_issue_comment(self, webhooker: Webhooker, thread: discord.Thread, repo_data: dict, issue_data: dict, comment_data: dict):
         async with db.MaybeAcquire(pool=self.bot.pool) as con:
             row = await con.fetchrow('SELECT id FROM issue_comments WHERE id = $1 AND issue = $2;', comment_data['id'], issue_data['id'])
@@ -372,6 +446,18 @@ class Github(commands.Cog):
         command = "INSERT INTO issues(id, thread, repository, number, pull_request, closed, locked, labels, author, title) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);"
         message: discord.WebhookMessage = await webhooker.create_thread(f"[{repo_data['name']}] {issue_data['title']}", wait=True, **self.data_to_kwargs(issue_data))
         thread: discord.Thread = next(thread for thread in message.channel.threads if thread.id == message.id)
+        labels = [label['name'] for label in issue_data['labels']]
+
+        available_tags = thread.parent.available_tags
+        tags = []
+
+        for label in labels:
+            tag = next((t for t in available_tags if t.name == label), None)
+            if tag:
+                tags.append(tag)
+
+        if tags:
+            await thread.add_tags(*tags)
 
         # Give thread time to register
         await asyncio.sleep(3)
@@ -379,8 +465,11 @@ class Github(commands.Cog):
             await con.execute('INSERT INTO github_users(id, name, icon) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING;', issue_data['user']['id'], issue_data['user']['login'], issue_data['user']['avatar_url'])
             await con.execute(
                 command,
-                issue_data['id'], thread.id, repo_data['id'], issue_data['number'], 'pull_request' in issue_data,
-                issue_data['state'] == 'closed', issue_data['locked'], [], issue_data['user']['id'],
+                issue_data['id'], thread.id, repo_data['id'], issue_data['number'],
+                'pull_request' in issue_data,
+                issue_data['state'] == 'closed', issue_data['locked'],
+                labels,
+                issue_data['user']['id'],
                 issue_data['title'],
             )
             await con.execute(
@@ -423,6 +512,7 @@ class Github(commands.Cog):
 
             create = "INSERT INTO repositories(id, name, full_name, link_guild, link_channel) VALUES ($1, $2, $3, $4, $5);"
             await con.execute(create, id, repo['name'], repo['full_name'], channel.guild.id, channel.id)
+        await self.sync_labels(repo['full_name'], channel)
         await ctx.send("Created!")
 
 

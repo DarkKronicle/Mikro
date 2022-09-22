@@ -15,6 +15,7 @@ class Conversation(commands.Cog):
 
     async def cog_check(self, ctx: Context[BotT]) -> bool:
         if ctx.guild.id != 753693459369427044:
+            await ctx.send("Not the correct guild...")
             return False
         if not any([r.id == 905237148704329770 for r in ctx.author.roles]):
             await ctx.send('You have to be T3 to use that command!', ephemeral=True)
@@ -25,6 +26,7 @@ class Conversation(commands.Cog):
                 return True
             await ctx.send("You are not the owner of this thread!", ephemeral=True)
             return False
+        await ctx.send("Unknown...")
         return False
 
     @commands.hybrid_group(name='move')

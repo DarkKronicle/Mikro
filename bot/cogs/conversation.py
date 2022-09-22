@@ -22,7 +22,7 @@ class Conversation(commands.Cog):
             return False
         if isinstance(ctx.channel, discord.Thread):
             data = await self.bot.thread_handler.get_thread(ctx.channel.id)
-            if data.owner_id == ctx.author.id:
+            if data.owner_id == ctx.author.id or await self.bot.is_owner(ctx.author):
                 return True
             await ctx.send("You are not the owner of this thread!", ephemeral=True)
             return False

@@ -31,11 +31,11 @@ class SpotifyCommands(commands.Cog, name='Spotify'):
 
     @spotify_cmd.command(name='track')
     async def get_track(self, ctx: Context, *, name: str):
-        tracks = await self.sp.search(query=name, limit=1)
-        if not tracks:
+        tracks, = await self.sp.search(query=name, limit=1)
+        if not tracks or not tracks.items:
             await ctx.send("Couldn't find track!", ephemeral=True)
             return
-        embed = await self.get_track_embed(tracks[0].id)
+        embed = await self.get_track_embed(tracks.items[0].id)
         if embed is None:
             await ctx.send("Something went wrong!", ephemeral=True)
             return

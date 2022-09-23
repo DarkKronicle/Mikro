@@ -12,11 +12,14 @@ class Responses(commands.Cog):
     async def on_message(self, message: discord.Message):
         if message.author.id == self.bot.user.id:
             return
-        kwargs = await parse_content(message.content)
+        kwargs = await parse_content(self.bot, message.content)
         if len(kwargs) == 0:
             return
-        await message.edit(suppress=True)
+        suppressed = False
         for d in kwargs:
+            if not suppressed and d.pop('suppress', True):
+                await message.edit(suppress=True)
+                suppressed = True
             await message.reply(allowed_mentions=discord.AllowedMentions.none(), **d)
 
 

@@ -4,6 +4,7 @@ from typing import Optional, Any, Tuple, Callable, Union
 from bot.util import formatter
 import base64
 import json
+from discord.utils import MISSING
 
 
 class Embed(discord.Embed):
@@ -210,5 +211,7 @@ class Embed(discord.Embed):
             data.pop('image', None)
         return data
 
-    def set_title(self, title):
+    def set_title(self, title, url: Optional[str] = MISSING):
         self.title = title
+        if url is not MISSING:
+            self.url = url

@@ -32,6 +32,7 @@ startup_extensions = (
     'bot.cogs.embed_helper',
     'bot.cogs.thread_discovery',
     'bot.github.github_handler',
+    'bot.cogs.spotify',
 )
 
 

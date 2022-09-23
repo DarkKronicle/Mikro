@@ -15,7 +15,7 @@ _converters = defaultdict(list)
 URL_REGEX = re.compile(r'\b((?:https?://)?(?:(?:www\.)?(?:[\da-z\.-]+)\.(?:[a-z]{2,6}))(?:/[^\s]*)*/?)(?!>)\b')
 
 
-async def parse_content(content: str):
+async def parse_content(bot, content: str):
     kwargs_list = []
     for key, value in _converters.items():
         key: CustomResponse
@@ -24,7 +24,7 @@ async def parse_content(content: str):
         for p in processed:
             for v in value:
                 try:
-                    data = await v.process(p)
+                    data = await v.process(bot, p)
                     if data is not None:
                         kwargs_list.append(data)
                 except Exception as e:
@@ -38,7 +38,7 @@ class CustomResponse:
     def __init__(self, func):
         self.func = func
 
-    async def process(self, content: typing.Any) -> dict:
+    async def process(self, bot, content: typing.Any) -> dict:
         return await self.func(content=content)
 
     @classmethod
@@ -85,8 +85,8 @@ class UrlResponse(CustomResponse):
     def __init__(self, func):
         super().__init__(func)
 
-    async def process(self, content: parse.ParseResult) -> None:
-        return await self.func(content)
+    async def process(self, bot, content: parse.ParseResult) -> None:
+        return await self.func(bot, content)
 
     @classmethod
     async def convert(cls, content: str):

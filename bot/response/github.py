@@ -1,13 +1,11 @@
 from . import *
 
-import aiohttp
-
 from urllib import parse
 from bot.util.github_util import GithubClient
 
 
 @custom_response(parse.ParseResult)
-async def github(content: parse.ParseResult):
+async def github(bot, content: parse.ParseResult):
     if content.netloc != 'github.com':
         return None
     path = content.path

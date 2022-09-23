@@ -26,11 +26,11 @@ class SpotifyCommands(commands.Cog, name='Spotify'):
         self.sp = tk.Spotify(token=token, sender=sender, chunked_on=True)
 
     @commands.hybrid_group(name='spotify')
-    async def spotify(self, ctx: Context):
+    async def spotify_cmd(self, ctx: Context):
         pass
 
-    @spotify.command(name='track')
-    async def spotify(self, ctx: Context, *, name: str):
+    @spotify_cmd.command(name='track')
+    async def get_track(self, ctx: Context, *, name: str):
         tracks = await self.sp.search(query=name, limit=1)
         if not tracks:
             await ctx.send("Couldn't find track!", ephemeral=True)

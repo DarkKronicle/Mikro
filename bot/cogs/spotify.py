@@ -1,3 +1,6 @@
+import traceback
+
+from youtubesearchpython.__future__ import VideosSearch
 from datetime import datetime
 
 import httpx
@@ -10,6 +13,7 @@ from bot.core.embed import Embed
 from bot.util.human import combine_list_and, format_code
 from bot.util.time_util import ms_to_time
 from bot.util import ansi
+from youtubesearchpython.__future__ import VideosSearch
 
 
 class SpotifyCommands(commands.Cog, name='Spotify'):
@@ -24,6 +28,12 @@ class SpotifyCommands(commands.Cog, name='Spotify'):
         sender = tk.CachingSender(512, tk.AsyncSender(client=client))
         token = tk.request_client_token(client_id=bot_global.config['sp_id'], client_secret=bot_global.config['sp_secret'])
         self.sp = tk.Spotify(token=token, sender=sender, chunked_on=True)
+
+    async def get_youtube_video(self, track: tk.model.Track):
+        artists = ' '.join([artist.name for artist in track.artists])
+        videos_search = VideosSearch(f'{artists} {track.name}', limit=1)
+        videos_result = await videos_search.next()
+        return videos_result['result'][0]
 
     @commands.hybrid_group(name='spotify')
     async def spotify_cmd(self, ctx: Context):
@@ -59,7 +69,6 @@ class SpotifyCommands(commands.Cog, name='Spotify'):
         )
         embed.set_thumbnail(url=album.images[0].url if len(album.images) > 0 else None)
         embed.add_field(name='Duration', value=ms_to_time(track.duration_ms))
-        embed.add_field(name='Popularity', value=str(track.popularity))
         genres = album.genres if len(album.genres) > 0 else artist.genres
         if genres:
             embed.add_field(name='Genres', value=combine_list_and(genres))
@@ -74,22 +83,30 @@ class SpotifyCommands(commands.Cog, name='Spotify'):
         if date is not None:
             embed.timestamp = date
 
-        embed.description = self.get_ansi_block(features)
+        embed.description = self.get_ansi_block(features, track.popularity)
 
-        embed.set_footer()
+        try:
+            youtube_url = (await self.get_youtube_video(track))['link']
+            embed.add_field(name='Links', value=f'__**[Spotify]({track.external_urls["spotify"]})**__\n__**[YouTube]({youtube_url})**__')
+        except:
+            traceback.print_exc()
 
         return embed
 
-    def get_ansi_block(self, features: tk.model.AudioFeatures):
-        formatted = []
-        formatted.append(f'{ansi.RESET}{ansi.format_attributes(ansi.WHITE, ansi.UNDERLINE)}Features')
-        formatted.append('')
-        features_in = ['acousticness', 'danceability', 'energy', 'instrumentalness', 'liveness', 'speechiness', 'tempo', 'loudness']
+    def get_ansi_block(self, features: tk.model.AudioFeatures, popularity=None):
+        formatted = [f'{ansi.RESET}{ansi.format_attributes(ansi.WHITE, ansi.UNDERLINE, ansi.BOLD)}Features', '']
+        features_in = ['acousticness', 'danceability', 'energy', 'instrumentalness', 'tempo', 'loudness', 'popularity']
         i = 0
         for feature in features_in:
             i += 1
             color = None
-            value = getattr(features, feature)
+            if feature == 'popularity':
+                value = popularity
+                if value is None:
+                    continue
+                value /= 100
+            else:
+                value = getattr(features, feature)
             if feature == 'loudness':
                 suffix = ' dB'
             elif feature == 'tempo':

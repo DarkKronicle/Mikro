@@ -33,6 +33,7 @@ startup_extensions = (
     'bot.cogs.thread_discovery',
     'bot.github.github_handler',
     'bot.cogs.spotify',
+    'bot.cogs.emoji',
 )
 
 

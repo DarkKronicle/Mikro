@@ -12,3 +12,7 @@ asyncpg~=0.26.0
 tqdm~=4.64.0
 gidgethub~=5.2.0
 cachetools~=5.2.0
+Pillow~=9.2.0
+httpx~=0.23.0
+tekore~=4.4.0
+emoji~=2.1.0

@@ -8,6 +8,10 @@ import pathlib
 import traceback
 import typing
 
+import discord
+
+import emoji as emoji_lib
+
 _converter_types = {}
 
 _converters = defaultdict(list)
@@ -77,6 +81,21 @@ def custom_response(content_type: type):
         return wrapper
 
     return decorator
+
+
+@response_type(discord.Emoji)
+class EmojiResponse(CustomResponse):
+
+    def __init__(self, func):
+        super().__init__(func)
+
+    async def process(self, bot, content: list[str]) -> None:
+        return await self.func(bot, content)
+
+    @classmethod
+    async def convert(cls, content: str):
+        emojis = emoji_lib.distinct_emoji_list(content)
+        return [emojis] if len(emojis) > 0 else []
 
 
 @response_type(parse.ParseResult)

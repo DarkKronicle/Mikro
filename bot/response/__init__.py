@@ -94,7 +94,7 @@ class EmojiResponse(CustomResponse):
 
     @classmethod
     async def convert(cls, content: str):
-        emojis = emoji_lib.distinct_emoji_list(content)
+        emojis = emoji_lib.emoji_list(content)
         return [emojis] if len(emojis) > 0 else []
 
 

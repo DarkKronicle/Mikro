@@ -10,7 +10,7 @@ async def emoji_kitchen(bot, content: list[str]):
     if len(content) < 2:
         return None
 
-    found = [emoji.get_hex_from_char(f) for f in set(content)]
+    found = [emoji.get_hex_from_char(f) for f in content]
     urls = emoji.get_n_urls(found, n=25)
     if len(urls) == 0:
         return None

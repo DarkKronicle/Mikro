@@ -43,6 +43,8 @@ class Utility(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
+        if message.guild is None or message.guild.id != 753693459369427044:
+            return
         if message.channel.type != discord.ChannelType.news:
             return
         await message.publish()

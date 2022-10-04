@@ -16,6 +16,9 @@ class ThreadDiscovery(commands.Cog):
 
     @commands.Cog.listener()
     async def on_thread_create(self, thread: discord.Thread):
+        if thread.guild.id != 753693459369427044:
+            return
+
         # Give DB time to update
         if not self.bot.thread_handler.is_channel_public(thread.parent):
             # Private stuff
@@ -35,6 +38,8 @@ class ThreadDiscovery(commands.Cog):
     # This is called from stats
     async def on_message(self, message: discord.Message):
         if not isinstance(message.channel, discord.Thread):
+            return
+        if message.guild is None or message.guild.id != 753693459369427044:
             return
         if not await self.bot.thread_handler.exists(message.channel.id):
             return

@@ -105,6 +105,8 @@ class Search(commands.Cog):
 
     @commands.command(name='search')
     async def search_command(self, ctx: Context, *, query: str):
+        if ctx.guild is None or ctx.guild.id != 753693459369427044:
+            return
         q = Query([PARAMETERS['content'].copy(query)])
         results = {}
         async with db.MaybeAcquire(pool=self.bot.pool) as con:

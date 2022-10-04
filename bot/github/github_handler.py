@@ -216,6 +216,8 @@ class Github(commands.Cog):
     async def on_message(self, message: discord.Message):
         if not isinstance(message.channel, discord.Thread) or not isinstance(message.channel.parent, discord.ForumChannel):
             return
+        if message.guild is None or message.guild.id != 753693459369427044:
+            return
         thread: discord.Thread = message.channel
         issue_data = await self.get_issue(thread)
         if not issue_data:
@@ -228,6 +230,8 @@ class Github(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_thread_update(self, payload: discord.RawThreadUpdateEvent):
+        if payload.guild_id is None or payload.guild_id != 753693459369427044:
+            return
         async with db.MaybeAcquire(pool=self.bot.pool) as con:
             issue_data = await con.fetchrow("SELECT * FROM issues WHERE thread = $1;", payload.thread_id)
             if issue_data is None:
@@ -291,6 +295,8 @@ class Github(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_message_delete(self, payload: discord.RawMessageDeleteEvent):
+        if payload.guild_id is None or payload.guild_id != 753693459369427044:
+            return
         async with db.MaybeAcquire(pool=self.bot.pool) as con:
             issue_com = "SELECT * FROM issue_comments WHERE message_id = $1;"
             comment_data = await con.fetchrow(issue_com, payload.message_id)
@@ -306,6 +312,8 @@ class Github(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_message_edit(self, payload: discord.RawMessageUpdateEvent):
+        if payload.guild_id is None or payload.guild_id != 753693459369427044:
+            return
         if 'content' not in payload.data:
             return
         async with db.MaybeAcquire(pool=self.bot.pool) as con:

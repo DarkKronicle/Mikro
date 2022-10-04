@@ -173,7 +173,7 @@ class Stats(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
-        if message.guild is None or message.channel is None or message.author.bot:
+        if message.guild is None or message.channel is None or message.author.bot or message.guild.id != 753693459369427044:
             return
         if (message.guild.id, message.author.id) in self.cooldown:
             return

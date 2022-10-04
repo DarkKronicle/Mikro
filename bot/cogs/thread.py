@@ -310,6 +310,8 @@ class ThreadCommands(commands.Cog):
 
     @commands.Cog.listener()
     async def on_thread_create(self, thread: discord.Thread):
+        if thread.guild.id != 753693459369427044:
+            return
         async with self.lock:
             if self.get_thread.exists(thread.id):
                 return
@@ -327,6 +329,8 @@ class ThreadCommands(commands.Cog):
     async def on_message(self, message: discord.Message):
         if not isinstance(message.channel, discord.Thread):
             return
+        if message.guild is None or message.guild.id != 753693459369427044:
+            return
         await asyncio.sleep(0.3)
         command = 'INSERT INTO thread_messages(thread, message_id, message_content, message_content_tsv) VALUES ($1, $2, $3, to_tsvector($3)) ON CONFLICT DO NOTHING;'
         async with self.lock:
@@ -340,6 +344,8 @@ class ThreadCommands(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_thread_update(self, payload: discord.RawThreadUpdateEvent):
+        if payload.guild_id is None or payload.guild_id != 753693459369427044:
+            return
         thread_data: ThreadData = await self.get_thread(payload.thread_id)
         thread: discord.Thread = self.bot.get_channel(thread_data.thread_id)
         if thread is None:
@@ -352,14 +358,20 @@ class ThreadCommands(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_thread_delete(self, payload: discord.RawThreadDeleteEvent):
+        if payload.guild_id is None or payload.guild_id != 753693459369427044:
+            return
         command = 'DELETE FROM threads WHERE thread_id = $1;'
         async with db.MaybeAcquire(pool=self.bot.pool) as con:
             await con.execute(command, payload.thread_id)
 
     async def check(self, ctx: Context) -> bool:
+
         channel: discord.Thread = ctx.channel
         if not isinstance(channel, discord.Thread):
             await ctx.send('You are not in a thread!')
+            return False
+        if ctx.guild is None or ctx.guild.id != 753693459369427044:
+            await ctx.send("Woah woah woah, we're not in Kronos Hangout!")
             return False
         if await self.bot.is_owner(ctx.author):
             return True

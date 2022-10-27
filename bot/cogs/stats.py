@@ -4,6 +4,7 @@ from typing import Optional
 import discord
 from discord.ext import commands
 
+from bot.core.embed import Embed
 from bot.mikro import Mikro
 from bot.util import database as db, cache
 from bot.util import time_util
@@ -135,7 +136,7 @@ class CooldownInterval(Enum):
     hours_1 = '1 HOURS'
     hours_3 = '3 HOURS'
     hours_6 = '6 HOURS'
-    hours_24 = '24 HOURS'
+    hours_24 = '24 HOURS',
 
     @staticmethod
     def from_delta(delta: timedelta):
@@ -167,9 +168,39 @@ class Stats(commands.Cog):
             await self.push()
         if time.minute == 0 and time.hour == 0:
             await self.remove_old()
+            await self.update_top()
 
     async def cog_unload(self) -> None:
         await self.push()
+
+    async def update_top(self):
+        command = "SELECT user_id, count(*) amount FROM messages WHERE time >= NOW() at time zone 'utc' - '1 WEEKS' AND guild_id = 753693459369427044 " \
+                  "group by user_id order by count(*) desc;"
+        async with db.MaybeAcquire(pool=self.bot.pool) as con:
+            rows = await con.fetch(command)
+        if not rows:
+            return
+        message = []
+        i = 0
+        for r in rows:
+            user_id = r['user_id']
+            amount = r['amount']
+            user: discord.Member = self.bot.get_main_guild().get_member(user_id)
+            if not user:
+                continue
+            if any([ro.id == 839214547646152757 for ro in user.roles]):
+                continue
+            i += 1
+            message.append(f"`{i}.` {user.mention} {amount} messages")
+        embed = Embed()
+        embed.set_description('\n'.join(message))
+        await self.bot.get_main_guild().get_channel(753693459369427047).send(embed=embed)
+
+    @commands.is_owner()
+    @commands.command(name="updatetop")
+    async def cmd_update_top(self):
+        await self.update_top()
+
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):

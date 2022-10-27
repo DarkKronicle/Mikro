@@ -39,8 +39,8 @@ class SupportForum(commands.Cog):
                 break
         if chosen is not None:
             await thread.add_tags(chosen)
-        await thread.edit(archived=True, locked=True)
         await ctx.send("This thread is marked as solved ✅")
+        await thread.edit(archived=True, locked=True)
 
 
 async def setup(bot):

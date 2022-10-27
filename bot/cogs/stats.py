@@ -4,6 +4,7 @@ from typing import Optional
 import discord
 from discord.ext import commands
 
+from bot.core.context import Context
 from bot.core.embed import Embed
 from bot.mikro import Mikro
 from bot.util import database as db, cache
@@ -198,8 +199,9 @@ class Stats(commands.Cog):
 
     @commands.is_owner()
     @commands.command(name="updatetop")
-    async def cmd_update_top(self):
+    async def cmd_update_top(self, ctx: Context):
         await self.update_top()
+        await ctx.send("Done!", ephemeral=True)
 
 
     @commands.Cog.listener()

@@ -175,7 +175,7 @@ class Stats(commands.Cog):
         await self.push()
 
     async def update_top(self):
-        command = "SELECT user_id, count(*) amount FROM messages WHERE time >= NOW() at time zone 'utc' - '1 WEEKS' AND guild_id = 753693459369427044 " \
+        command = "SELECT user_id, count(*) amount FROM messages WHERE time >= NOW() at time zone 'utc' - interval '1 WEEKS' AND guild_id = 753693459369427044 " \
                   "group by user_id order by count(*) desc;"
         async with db.MaybeAcquire(pool=self.bot.pool) as con:
             rows = await con.fetch(command)

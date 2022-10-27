@@ -185,7 +185,7 @@ class Stats(commands.Cog):
         i = 0
         for r in rows:
             if i >= 10:
-                return
+                break
             user_id = r['user_id']
             amount = r['amount']
             user: discord.Member = self.bot.get_main_guild().get_member(user_id)

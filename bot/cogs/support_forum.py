@@ -26,7 +26,7 @@ class SupportForum(commands.Cog):
 
     @commands.hybrid_command(name="solved")
     async def mark_solved(self, ctx: Context):
-        thread_data: ThreadData = await self.bot.thread_handler.get_thread(ctx.channel)
+        thread_data: ThreadData = await self.bot.thread_handler.get_thread(ctx.channel.id)
         if not thread_data.owner_id == ctx.author.id and not self.is_support(ctx.author):
             await ctx.send("You're not allowed to do that!", ephemeral=True)
             return

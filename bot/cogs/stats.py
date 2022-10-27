@@ -137,7 +137,7 @@ class CooldownInterval(Enum):
     hours_1 = '1 HOURS'
     hours_3 = '3 HOURS'
     hours_6 = '6 HOURS'
-    hours_24 = '24 HOURS',
+    hours_24 = '24 HOURS'
 
     @staticmethod
     def from_delta(delta: timedelta):
@@ -184,6 +184,8 @@ class Stats(commands.Cog):
         message = []
         i = 0
         for r in rows:
+            if i >= 10:
+                return
             user_id = r['user_id']
             amount = r['amount']
             user: discord.Member = self.bot.get_main_guild().get_member(user_id)

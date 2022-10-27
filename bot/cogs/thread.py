@@ -324,6 +324,8 @@ class ThreadCommands(commands.Cog):
                     break
             else:
                 await message.pin()
+            await asyncio.sleep(1)
+            await message.edit(content="""{0} feel free to use `/thread` to customize this thread!\n\n<@523605852557672449>""".format(thread.owner.mention).replace('\t', '').replace('  ', ''))
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):

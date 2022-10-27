@@ -34,6 +34,7 @@ startup_extensions = (
     'bot.github.github_handler',
     'bot.cogs.spotify',
     'bot.cogs.emoji',
+    'bot.cogs.support_forum',
 )
 
 

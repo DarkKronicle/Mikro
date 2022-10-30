@@ -1,3 +1,4 @@
+import random
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -205,6 +206,19 @@ class Stats(commands.Cog):
         await self.update_top()
         await ctx.send("Done!", ephemeral=True)
 
+    @commands.Cog.listener()
+    async def on_member_remove(self, member: discord.Member):
+        start = member.joined_at
+        channel = self.bot.get_main_guild().get_channel(878363458708570133)
+        the_message = None
+        async for message in channel.history(after=start - timedelta(seconds=1), limit=2, oldest_first=True):
+            if message.author.id == member.id:
+                the_message = message
+                break
+        if not the_message:
+            return
+        choice = random.choice(['<:omg:1025976523339075676>', '👋'])
+        await the_message.add_reaction(choice)
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):

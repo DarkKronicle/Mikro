@@ -57,7 +57,6 @@ class SpotifyCommands(commands.Cog, name='Spotify'):
     async def backup(self, ctx: Context, *, uri: str):
         if uri.strip().startswith('spotify:'):
             uri = uri.split(':')[-1]
-        playlist: tk.model.Playlist = await self.sp.playlist(uri)
         save = []
         tracks = await self.sp.playlist_items(uri)
         async for t in self.sp.all_items(tracks):

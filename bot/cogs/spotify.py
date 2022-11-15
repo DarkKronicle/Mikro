@@ -1,5 +1,7 @@
 import traceback
+from io import StringIO
 
+import discord
 from youtubesearchpython.__future__ import VideosSearch
 from datetime import datetime
 
@@ -50,6 +52,20 @@ class SpotifyCommands(commands.Cog, name='Spotify'):
             await ctx.send("Something went wrong!", ephemeral=True)
             return
         await ctx.send(embed=embed)
+
+    @spotify_cmd.command(name='backup')
+    async def backup(self, ctx: Context, *, uri: str):
+        if uri.strip().startswith('spotify:'):
+            uri = uri.split(':')[-1]
+        tracks: list[tk.model.Track] = await self.sp.playlist(uri, as_tracks=True)
+        save = []
+        for t in tracks:
+            save.append("{0} [{1}] [{2}]".format(t.uri, t.name, t.external_urls['spotify']))
+        buffer = StringIO()
+        buffer.write("\n".join(save))
+        buffer.seek(0)
+        file = discord.File(fp=buffer, filename="embed.txt")
+        await ctx.send("Here's your file!", file=file)
 
     async def get_track_embed(self, track_id):
         try:

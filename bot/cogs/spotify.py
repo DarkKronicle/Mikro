@@ -57,14 +57,16 @@ class SpotifyCommands(commands.Cog, name='Spotify'):
     async def backup(self, ctx: Context, *, uri: str):
         if uri.strip().startswith('spotify:'):
             uri = uri.split(':')[-1]
-        tracks: list[tk.model.Track] = await self.sp.playlist(uri, as_tracks=True)
+        playlist: tk.model.Playlist = await self.sp.playlist(uri)
         save = []
-        for t in tracks:
-            save.append("{0} [{1}] [{2}]".format(t.uri, t.name, t.external_urls['spotify']))
+        tracks = await self.sp.playlist_items(uri)
+        async for t in self.sp.all_items(tracks):
+            t: tk.model.PlaylistTrack
+            save.append("{0} [{1}] [{2}]".format(t.track.uri, t.track.name, t.track.external_urls['spotify']))
         buffer = StringIO()
         buffer.write("\n".join(save))
         buffer.seek(0)
-        file = discord.File(fp=buffer, filename="embed.txt")
+        file = discord.File(fp=buffer, filename="backup.txt")
         await ctx.send("Here's your file!", file=file)
 
     async def get_track_embed(self, track_id):
@@ -128,7 +130,7 @@ class SpotifyCommands(commands.Cog, name='Spotify'):
             elif feature == 'tempo':
                 formatted.append('')
                 i += 1
-                suffix = ' BMP'
+                suffix = ' BPM'
             else:
                 # It's percent
                 if value < .3:

@@ -61,7 +61,7 @@ class SpotifyCommands(commands.Cog, name='Spotify'):
         tracks = await self.sp.playlist_items(uri)
         async for t in self.sp.all_items(tracks):
             t: tk.model.PlaylistTrack
-            save.append("{0} | {2} [{2}]".format(t.track.id, t.track.name, t.track.external_urls['spotify']))
+            save.append("{0} | {2} [{1}]".format(t.track.id, t.track.name, t.track.external_urls['spotify']))
         buffer = StringIO()
         buffer.write("\n".join(save))
         buffer.seek(0)

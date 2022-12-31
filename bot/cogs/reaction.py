@@ -42,8 +42,9 @@ class Role:
 
 class ReactionMessage:
 
-    def __init__(self, bot, custom_id, message, placeholder, min_values, max_values, roles: list[Role]):
+    def __init__(self, bot, guild_id, custom_id, message, placeholder, min_values, max_values, roles: list[Role]):
         self.bot = bot
+        self.guild_id = guild_id
         self.custom_id = custom_id
         self.message = message
         self.placeholder = placeholder
@@ -59,7 +60,7 @@ class ReactionMessage:
         return None
 
     def get_role(self, role_id):
-        return self.bot.get_main_guild().get_role(role_id)
+        return self.bot.get_guild(self.guild_id).get_role(role_id)
 
     async def callback(self, interaction: discord.Interaction, values):
         try:
@@ -113,13 +114,14 @@ class Reaction(commands.Cog):
     async def load_reaction(self, name, data):
         roles = []
         message = data['data']['message']
+        guild_id = data['data']['guild_id']
         custom_id = data['data']['id']
         placeholder = data['data']['placeholder']
         min_values = data['data']['min']
         max_values = data['data']['max']
         for role in data['roles']:
             roles.append(Role(role['name'], role['description'], role['emoji'], role['role']))
-        self.data[name] = ReactionMessage(self.bot, custom_id, message, placeholder, min_values, max_values, roles)
+        self.data[name] = ReactionMessage(self.bot, guild_id, custom_id, message, placeholder, min_values, max_values, roles)
         self.bot.add_view(self.data[name].view)
 
     @commands.is_owner()

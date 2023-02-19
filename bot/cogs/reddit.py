@@ -46,7 +46,7 @@ class RedditCog(commands.Cog):
         if 4 < time.hour < 16:
             return
         sub: Subreddit = random.choice(self.subreddits)
-        async for submission in sub.top(limit=0):
+        async for submission in sub.top(limit=1, time_filter="day"):
             submission: Submission
             if submission.over_18:
                 # Send a post again

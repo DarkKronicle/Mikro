@@ -35,6 +35,8 @@ startup_extensions = (
     'bot.cogs.spotify',
     'bot.cogs.emoji',
     'bot.cogs.support_forum',
+    'bot.cogs.anilist',
+    'bot.cogs.xkcd',
 )
 
 

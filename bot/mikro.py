@@ -37,6 +37,7 @@ startup_extensions = (
     'bot.cogs.support_forum',
     'bot.cogs.anilist',
     'bot.cogs.xkcd',
+    'bot.cogs.reddit',
 )
 
 

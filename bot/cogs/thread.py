@@ -329,7 +329,7 @@ class ThreadCommands(commands.Cog):
                 info_message = []
                 for t in thread.applied_tags:
                     response = self.tag_responses.get(str(t.id), None)
-                    if 'message' in response:
+                    if response and 'message' in response:
                         info_message.append(response['message'].strip())
                 if info_message:
                     await thread.send("\n\n".join(info_message))

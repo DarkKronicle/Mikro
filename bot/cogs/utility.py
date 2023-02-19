@@ -49,6 +49,12 @@ class Utility(commands.Cog):
             return
         await message.publish()
 
+    @commands.command('tagid')
+    async def tag_id(self, ctx, *, channel: discord.ForumChannel):
+        await ctx.send(
+            '\n'.join(["{0} - `{1}`".format(t.name, t.id) for t in channel.available_tags])
+        )
+
 
 async def setup(bot):
     await bot.add_cog(Utility(bot))

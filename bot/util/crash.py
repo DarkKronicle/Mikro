@@ -15,7 +15,7 @@ async def upload_crash(file_url):
     async with aiohttp.ClientSession() as session:
         async with session.post(upload_url, data=zipped, headers=HEADERS) as r:
             if r.status == 200:
-                return (await r.json())['crashUrl']
+                return (await r.json(content_type=None))['crashUrl']
             else:
                 if r.content_type == 'text/html':
                     raise discord.InvalidData(await r.text())

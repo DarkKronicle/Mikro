@@ -5,6 +5,7 @@ import logging
 from typing import Optional, TYPE_CHECKING
 
 import discord
+import toml
 from discord.ext import commands
 
 from bot.core.context import Context
@@ -140,6 +141,9 @@ class ThreadCommands(commands.Cog):
         self.bot.add_on_load(self.update_threads)
         self.setup = False
         self.lock = asyncio.Lock()
+        self.tag_responses = {}
+        with open('./config/tags.toml', 'r') as f:
+            self.tag_responses = toml.load(f)
 
     @staticmethod
     def is_channel_public(channel: discord.TextChannel):
@@ -319,9 +323,16 @@ class ThreadCommands(commands.Cog):
         if thread.owner is not None:
             message = await thread.send("""{0} feel free to use `/thread` to customize this thread!""".format(thread.owner.mention).replace('\t', '').replace('  ', ''))
             if isinstance(thread.parent, discord.ForumChannel):
-                async for message in thread.history(limit=1, oldest_first=True):
-                    await message.pin()
+                async for to_pin in thread.history(limit=1, oldest_first=True):
+                    await to_pin.pin()
                     break
+                info_message = []
+                for t in thread.applied_tags:
+                    response = self.tag_responses.get(str(t.id), None)
+                    if 'message' in response:
+                        info_message.append(response['message'].strip())
+                if info_message:
+                    await thread.send("\n\n".join(info_message))
             else:
                 await message.pin()
             await asyncio.sleep(1)

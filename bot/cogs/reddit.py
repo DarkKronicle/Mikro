@@ -23,7 +23,7 @@ class RedditCog(commands.Cog):
         )
         self.subreddits = []
         self.minutes = 30
-        self.bot.add_loop()
+        self.bot.add_loop("reddit", self.random_loop)
 
     async def cog_load(self) -> None:
         self.subreddits = [

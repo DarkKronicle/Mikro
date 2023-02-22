@@ -24,11 +24,10 @@ class XKCD(commands.Cog):
     async def xkcd_loop(self, time: datetime):
         if time.minute != 0:
             return
-        if time.hour != 18:
-            return
         comic = await self.get_current()
-        if comic is None or time.day != int(comic['day']):
+        if comic and comic['num'] == self.bot.data.get('num', 0):
             return
+        self.bot.data['num'] = comic['num']
         embed = self.format_embed(comic)
         channel = self.bot.get_guild(753693459369427044).get_channel(753695400182939678)
         await channel.send(embed=embed)

@@ -1,4 +1,5 @@
 import asyncio
+import json
 import math
 import typing
 
@@ -47,6 +48,13 @@ class Mikro(commands.Bot):
         self.debug = bot_global.config.get('debug', False)
         allowed_mentions = discord.AllowedMentions(roles=False, everyone=False, users=True)
         self.pool = pool
+        self.data = {}
+        try:
+            with open("./config/data.json", "r") as j:
+                json.load(j)
+        except:
+            pass
+
         intents = discord.Intents(
             guilds=True,
             members=True,
@@ -109,6 +117,10 @@ class Mikro(commands.Bot):
     @tasks.loop(minutes=1)
     async def time_loop(self):
         time = time_util.round_time(round_to=60)
+        if time.hour == 0 and time.minute == 0:
+            # Save persistent data once a day
+            with open("config/data.json", 'w') as f:
+                json.dump(self.data, f, indent=4)
         for _, function in self.loops.items():
             try:
                 await function(time)
@@ -161,6 +173,11 @@ class Mikro(commands.Bot):
             return
         if raise_err:
             raise error
+
+    async def close(self) -> None:
+        with open("config/data.json", 'w') as f:
+            json.dump(self.data, f, indent=4)
+        return await super().close()
 
     async def get_context(self, origin: typing.Union[discord.Interaction, discord.Message], /, *, cls=Context) -> Context:
         return await super().get_context(origin, cls=cls)

@@ -33,7 +33,7 @@ class RedditCog(commands.Cog):
             await self.reddit.subreddit("softwaregore"),
             await self.reddit.subreddit("ProgrammingHorror"),
             await self.reddit.subreddit("crazystairs"),
-            await self.reddit.subreddit("PheonixSC"),
+            await self.reddit.subreddit("PhoenixSC"),
             await self.reddit.subreddit("UselessFacts"),
             await self.reddit.subreddit("BarbaraWalters4Scale"),
         ]

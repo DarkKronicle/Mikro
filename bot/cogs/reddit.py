@@ -22,7 +22,7 @@ class RedditCog(commands.Cog):
             client_secret=bot_global.config['reddit_secret'],
         )
         self.subreddits = []
-        self.minutes = 30
+        self.minutes = 10
         self.bot.add_loop("reddit", self.random_loop)
 
     async def cog_load(self) -> None:
@@ -43,18 +43,26 @@ class RedditCog(commands.Cog):
         if self.minutes > 0:
             return
         self.minutes = random.randint(30, 120)
-        if 4 < time.hour < 16:
-            return
+        if not self.bot.debug:
+            if 4 < time.hour < 16:
+                return
         sub: Subreddit = random.choice(self.subreddits)
-        async for submission in sub.top(limit=1, time_filter="day"):
-            submission: Submission
+        async for submission in sub.top(limit=10, time_filter="day"):
             if submission.over_18:
                 # Send a post again
                 self.minutes = 0
                 return
+            if submission.id in self.bot.data.get('reddit', []):
+                continue
+            if 'reddit' not in self.bot.data:
+                self.bot.data['reddit'] = []
+            self.bot.data['reddit'].insert(0, submission.id)
+            if len(self.bot.data['reddit']) > 100:
+                self.bot.data['reddit'] = self.bot.data['reddit'][:100]
             subreddit: Subreddit = submission.subreddit
             await subreddit.load()
             await self.bot.get_main_guild().get_channel(753695400182939678).send(embed=self.format_embed(submission))
+            return
 
     def format_embed(self, submission: Submission, *, nsfw=False):
         subreddit: Subreddit = submission.subreddit

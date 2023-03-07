@@ -39,7 +39,7 @@ class RedditCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
-        if message.channel.id == 753695400182939678 and not self.messaged_since:
+        if message.channel.id == 753695400182939678 and not self.messaged_since and not message.author.id == self.bot.user.id:
             self.minutes = random.randint(10, 30)
             self.messaged_since = True
 

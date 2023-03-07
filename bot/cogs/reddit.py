@@ -1,6 +1,7 @@
 import random
 
 import asyncpraw
+import discord
 from discord.ext import commands
 
 from bot.core.context import Context
@@ -23,6 +24,7 @@ class RedditCog(commands.Cog):
         )
         self.subreddits = []
         self.minutes = 10
+        self.messaged_since = True
         self.bot.add_loop("reddit", self.random_loop)
 
     async def cog_load(self) -> None:
@@ -32,25 +34,31 @@ class RedditCog(commands.Cog):
             await self.reddit.subreddit("okbuddyphd"),
             await self.reddit.subreddit("softwaregore"),
             await self.reddit.subreddit("ProgrammingHorror"),
-            await self.reddit.subreddit("crazystairs"),
             await self.reddit.subreddit("PhoenixSC"),
-            await self.reddit.subreddit("UselessFacts"),
-            await self.reddit.subreddit("BarbaraWalters4Scale"),
         ]
+
+    @commands.Cog.listener()
+    async def on_message(self, message: discord.Message):
+        if message.channel.id == 753695400182939678 and not self.messaged_since:
+            self.minutes = random.randint(10, 30)
+            self.messaged_since = True
 
     async def random_loop(self, time):
         self.minutes -= 1
-        if self.minutes > 0:
+        if self.minutes > 0 or self.minutes <= -1:
             return
-        self.minutes = random.randint(30, 120)
+        self.minutes = -1
+        self.messaged_since = False
         if not self.bot.debug:
             if 4 < time.hour < 16:
+                # Reset so it continues to check
+                self.minutes = random.randint(30, 120)
                 return
         sub: Subreddit = random.choice(self.subreddits)
         async for submission in sub.top(limit=10, time_filter="day"):
             if submission.over_18:
                 # Send a post again
-                self.minutes = 0
+                self.minutes = 1
                 return
             if submission.id in self.bot.data.get('reddit', []):
                 continue

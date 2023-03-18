@@ -47,6 +47,7 @@ class XKCD(commands.Cog):
     def format_embed(cls, comic: dict):
         embed = Embed()
         embed.set_title(comic['title'])
+        embed.description = comic['alt']
         embed.url = "https://xkcd.com/{0}/".format(comic['num'])
         embed.set_footer(text='{0}-{1}-{2} #{3}'.format(comic['year'], comic['month'], comic['day'], comic['num']))
         embed.set_image(url=comic['img'])

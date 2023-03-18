@@ -165,12 +165,13 @@ class Stats(commands.Cog):
         self.cache: list[Message] = []
         self.cooldown = cache.ExpiringDict(seconds=20)
 
-    async def update_loop(self, time):
+    async def update_loop(self, time: datetime):
         if time.minute % 5 == 0:
             await self.push()
         if time.minute == 0 and time.hour == 0:
             await self.remove_old()
-            await self.update_top()
+            if time.weekday() % 2 == 0:
+                await self.update_top()
 
     async def cog_unload(self) -> None:
         await self.push()
@@ -192,8 +193,8 @@ class Stats(commands.Cog):
             user: discord.Member = self.bot.get_main_guild().get_member(user_id)
             if not user:
                 continue
-            if any([ro.id == 839214547646152757 for ro in user.roles]):
-                continue
+            # if any([ro.id == 839214547646152757 for ro in user.roles]):
+            #     continue
             i += 1
             message.append(f"`{i}.` {user.mention} {amount} messages")
         embed = Embed()

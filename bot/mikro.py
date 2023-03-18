@@ -51,7 +51,7 @@ class Mikro(commands.Bot):
         self.data = {}
         try:
             with open("./config/data.json", "r") as j:
-                json.load(j)
+                self.data = json.load(j)
         except:
             pass
 

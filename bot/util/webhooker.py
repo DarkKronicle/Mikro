@@ -227,9 +227,10 @@ class Webhooker:
             name = 'Blank'
         async with self.bot.thread_handler.lock:
             thread = await m.create_thread(name=get_name(name))
-            data = await ThreadData.from_thread(thread)
-            data.owner_id = creator.id
-            await self.bot.thread_handler.sync_thread(data)
+            if thread.guild.id == 753693459369427044:
+                data = await ThreadData.from_thread(thread)
+                data.owner_id = creator.id
+                await self.bot.thread_handler.sync_thread(data)
 
         for mes in self.flatten(messages):
             await self.send_message(mes, thread=thread)

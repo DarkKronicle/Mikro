@@ -15,6 +15,8 @@ class Conversation(commands.Cog):
 
     async def cog_check(self, ctx: Context[BotT]) -> bool:
         if ctx.guild.id != 753693459369427044:
+            if await self.bot.is_owner(ctx.author):
+                return True
             await ctx.send("Not the correct guild...")
             return False
         if not any([r.id == 905237148704329770 for r in ctx.author.roles]):
